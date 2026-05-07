@@ -3,13 +3,29 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const storageBucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || 'restaurant-assets';
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+const normalizeSupabaseUrl = (url) => {
+  if (!url) return '';
+
+  try {
+    return new URL(url).origin;
+  } catch {
+    return '';
+  }
+};
+
+const normalizedSupabaseUrl = normalizeSupabaseUrl(supabaseUrl);
+export const isSupabaseConfigured = Boolean(normalizedSupabaseUrl && supabaseAnonKey);
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. Supabase calls will fail until .env.local is configured.');
 }
 
-export const supabase = createClient(supabaseUrl || 'https://example.supabase.co', supabaseAnonKey || 'missing-key');
+if (supabaseUrl && normalizedSupabaseUrl && supabaseUrl !== normalizedSupabaseUrl) {
+  console.warn('NEXT_PUBLIC_SUPABASE_URL should be only the project origin. Using normalized Supabase URL:', normalizedSupabaseUrl);
+}
+
+export const supabase = createClient(normalizedSupabaseUrl || 'https://example.supabase.co', supabaseAnonKey || 'missing-key');
 
 const tables = {
   User: 'profiles',

@@ -8,7 +8,8 @@ export default [
   {
     files: [
       "src/components/**/*.{js,mjs,cjs,jsx}",
-      "src/pages/**/*.{js,mjs,cjs,jsx}",
+      "src/screens/**/*.{js,mjs,cjs,jsx}",
+      "src/app/**/*.{js,mjs,cjs,jsx}",
       "src/Layout.jsx",
     ],
     ignores: ["src/lib/**/*", "src/components/ui/**/*"],

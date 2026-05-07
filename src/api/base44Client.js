@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const storageBucket = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || 'restaurant-assets';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const storageBucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || 'restaurant-assets';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Supabase calls will fail until .env.local is configured.');
+  console.warn('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. Supabase calls will fail until .env.local is configured.');
 }
 
 export const supabase = createClient(supabaseUrl || 'https://example.supabase.co', supabaseAnonKey || 'missing-key');

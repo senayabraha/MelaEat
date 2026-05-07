@@ -12,34 +12,34 @@ import RestaurantLayout from '@/components/layout/RestaurantLayout';
 import DriverLayout from '@/components/layout/DriverLayout';
 import AdminLayout from '@/components/layout/AdminLayout';
 
-import Home from '@/pages/Home';
-import RestaurantDetail from '@/pages/RestaurantDetail';
-import Cart from '@/pages/Cart';
-import Checkout from '@/pages/Checkout';
-import Orders from '@/pages/Orders';
-import OrderTracking from '@/pages/OrderTracking';
-import Favorites from '@/pages/Favorites';
-import Profile from '@/pages/Profile';
-import Login from '@/pages/Login';
+import Home from '@/screens/Home';
+import RestaurantDetail from '@/screens/RestaurantDetail';
+import Cart from '@/screens/Cart';
+import Checkout from '@/screens/Checkout';
+import Orders from '@/screens/Orders';
+import OrderTracking from '@/screens/OrderTracking';
+import Favorites from '@/screens/Favorites';
+import Profile from '@/screens/Profile';
+import Login from '@/screens/Login';
 
-import RestaurantOverview from '@/pages/restaurant/Overview';
-import RestaurantOrders from '@/pages/restaurant/Orders';
-import RestaurantMenu from '@/pages/restaurant/Menu';
-import RestaurantPromotions from '@/pages/restaurant/Promotions';
-import RestaurantReports from '@/pages/restaurant/Reports';
-import RestaurantSettings from '@/pages/restaurant/Settings';
+import RestaurantOverview from '@/screens/restaurant/Overview';
+import RestaurantOrders from '@/screens/restaurant/Orders';
+import RestaurantMenu from '@/screens/restaurant/Menu';
+import RestaurantPromotions from '@/screens/restaurant/Promotions';
+import RestaurantReports from '@/screens/restaurant/Reports';
+import RestaurantSettings from '@/screens/restaurant/Settings';
 
-import DriverToday from '@/pages/driver/Today';
-import DriverActive from '@/pages/driver/Active';
-import DriverHistory from '@/pages/driver/History';
-import DriverEarnings from '@/pages/driver/Earnings';
-import DriverProfile from '@/pages/driver/Profile';
+import DriverToday from '@/screens/driver/Today';
+import DriverActive from '@/screens/driver/Active';
+import DriverHistory from '@/screens/driver/History';
+import DriverEarnings from '@/screens/driver/Earnings';
+import DriverProfile from '@/screens/driver/Profile';
 
-import RoleSelection from '@/pages/RoleSelection';
-import AdminOverview from '@/pages/admin/Overview';
-import AdminRestaurants from '@/pages/admin/Restaurants';
-import AdminUsers from '@/pages/admin/Users';
-import AdminOrders from '@/pages/admin/Orders';
+import RoleSelection from '@/screens/RoleSelection';
+import AdminOverview from '@/screens/admin/Overview';
+import AdminRestaurants from '@/screens/admin/Restaurants';
+import AdminUsers from '@/screens/admin/Users';
+import AdminOrders from '@/screens/admin/Orders';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user } = useAuth();

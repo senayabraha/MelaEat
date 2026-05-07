@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ClipboardList, BookOpen, Tag, BarChart3, Settings } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, BookOpen, Tag, BarChart3, Settings, User, LogOut } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardMobileNav from './DashboardMobileNav';
@@ -11,6 +11,7 @@ const ITEMS = [
   { to: '/restaurant/menu', label: 'Menu', icon: BookOpen },
   { to: '/restaurant/promotions', label: 'Promotions', icon: Tag },
   { to: '/restaurant/reports', label: 'Reports', icon: BarChart3 },
+  { to: '/restaurant/profile', label: 'Profile', icon: User },
   { to: '/restaurant/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -36,7 +37,14 @@ export default function RestaurantLayout() {
       <main className="flex-1 min-w-0 pb-20 lg:pb-0">
         <Outlet context={{ user }} />
       </main>
-      <DashboardMobileNav items={ITEMS.slice(0, 5)} />
+      <DashboardMobileNav items={[
+        { to: '/restaurant', label: 'Home', icon: LayoutDashboard, end: true },
+        { to: '/restaurant/orders', label: 'Orders', icon: ClipboardList },
+        { to: '/restaurant/menu', label: 'Menu', icon: BookOpen },
+        { to: '/restaurant/profile', label: 'Profile', icon: User },
+        { to: '/restaurant/settings', label: 'Settings', icon: Settings },
+        { label: 'Logout', icon: LogOut, action: () => base44.auth.logout() },
+      ]} />
     </div>
   );
 }

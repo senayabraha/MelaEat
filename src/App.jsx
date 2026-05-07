@@ -29,12 +29,14 @@ import RestaurantMenu from '@/screens/restaurant/Menu';
 import RestaurantPromotions from '@/screens/restaurant/Promotions';
 import RestaurantReports from '@/screens/restaurant/Reports';
 import RestaurantSettings from '@/screens/restaurant/Settings';
+import RestaurantProfile from '@/screens/restaurant/Profile';
 
 import DriverToday from '@/screens/driver/Today';
 import DriverActive from '@/screens/driver/Active';
 import DriverHistory from '@/screens/driver/History';
 import DriverEarnings from '@/screens/driver/Earnings';
 import DriverProfile from '@/screens/driver/Profile';
+import DriverSettings from '@/screens/driver/Settings';
 
 import AdminOverview from '@/screens/admin/Overview';
 import AdminRestaurants from '@/screens/admin/Restaurants';
@@ -81,6 +83,7 @@ const AuthenticatedApp = () => {
         <Route path="menu" element={<RestaurantMenu />} />
         <Route path="promotions" element={<RestaurantPromotions />} />
         <Route path="reports" element={<RestaurantReports />} />
+        <Route path="profile" element={<RestaurantProfile />} />
         <Route path="settings" element={<RestaurantSettings />} />
       </Route>
 
@@ -91,6 +94,7 @@ const AuthenticatedApp = () => {
         <Route path="history" element={<DriverHistory />} />
         <Route path="earnings" element={<DriverEarnings />} />
         <Route path="profile" element={<DriverProfile />} />
+        <Route path="settings" element={<DriverSettings />} />
       </Route>
 
       {/* Admin dashboard */}

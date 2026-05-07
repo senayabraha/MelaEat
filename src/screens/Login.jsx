@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/api/base44Client';
+import { isSupabaseConfigured, supabase } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,6 +40,10 @@ export default function Login() {
     setMessage('');
 
     try {
+      if (!isSupabaseConfigured) {
+        throw new Error('Supabase is not configured yet. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then restart the app.');
+      }
+
       if (mode === 'signin') {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -81,7 +85,11 @@ export default function Login() {
       setConfirmPassword('');
       setMessage('Account created. Check your email to confirm your address, then sign in.');
     } catch (submitError) {
-      setError(submitError.message || 'Something went wrong. Please try again.');
+      if (submitError instanceof TypeError && submitError.message === 'Failed to fetch') {
+        setError('Could not reach Supabase. Check your NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY values, then restart the app or redeploy on Vercel.');
+      } else {
+        setError(submitError.message || 'Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

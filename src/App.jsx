@@ -4,7 +4,6 @@ import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import { Navigate } from 'react-router-dom';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 import CustomerLayout from '@/components/layout/CustomerLayout';
@@ -13,6 +12,7 @@ import DriverLayout from '@/components/layout/DriverLayout';
 import AdminLayout from '@/components/layout/AdminLayout';
 
 import Home from '@/screens/Home';
+import Landing from '@/screens/Landing';
 import RestaurantDetail from '@/screens/RestaurantDetail';
 import Cart from '@/screens/Cart';
 import Checkout from '@/screens/Checkout';
@@ -36,7 +36,6 @@ import DriverHistory from '@/screens/driver/History';
 import DriverEarnings from '@/screens/driver/Earnings';
 import DriverProfile from '@/screens/driver/Profile';
 
-import RoleSelection from '@/screens/RoleSelection';
 import AdminOverview from '@/screens/admin/Overview';
 import AdminRestaurants from '@/screens/admin/Restaurants';
 import AdminUsers from '@/screens/admin/Users';
@@ -58,16 +57,13 @@ const AuthenticatedApp = () => {
     if (authError.type === 'auth_required') { navigateToLogin(); return null; }
   }
 
-  // Redirect authenticated users with no assigned role to role selection
-  if (user && user.role === 'user' && window.location.pathname !== '/select-role') {
-    return <Navigate to="/select-role" replace />;
-  }
-
   return (
     <Routes>
+      <Route path="/" element={<Landing />} />
+
       {/* Customer / public */}
       <Route element={<CustomerLayout />}>
-        <Route path="/" element={<Home />} />
+        <Route path="/browse" element={<Home />} />
         <Route path="/restaurant/:id" element={<RestaurantDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
@@ -105,7 +101,6 @@ const AuthenticatedApp = () => {
         <Route path="orders" element={<AdminOrders />} />
       </Route>
 
-      <Route path="/select-role" element={<RoleSelection />} />
       <Route path="/login" element={<Login />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

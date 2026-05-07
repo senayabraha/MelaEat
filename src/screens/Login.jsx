@@ -1,26 +1,44 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { isSupabaseConfigured, supabase } from '@/api/base44Client';
+import { base44, isSupabaseConfigured, supabase } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Logo from '@/components/layout/Logo';
 
+const allowedRoles = new Set(['customer', 'restaurant', 'driver']);
+
+const roleLabels = {
+  customer: 'customer',
+  restaurant: 'restaurant partner',
+  driver: 'driver',
+};
+
+const roleDestinations = {
+  customer: '/browse',
+  restaurant: '/restaurant',
+  driver: '/driver',
+  admin: '/admin',
+};
+
 export default function Login() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const selectedRole = allowedRoles.has(params.get('role')) ? params.get('role') : 'customer';
   const [mode, setMode] = useState(params.get('mode') === 'signup' ? 'signup' : 'signin');
   const [fullName, setFullName] = useState('');
+  const [restaurantName, setRestaurantName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const hasRedirect = Boolean(params.get('redirect'));
 
   const redirectTo = useMemo(() => {
     const target = params.get('redirect');
-    if (!target) return '/';
+    if (!target) return roleDestinations[selectedRole];
 
     try {
       const decoded = decodeURIComponent(target);
@@ -30,8 +48,26 @@ export default function Login() {
       if (decoded.startsWith('/')) return decoded;
     } catch {}
 
-    return '/';
-  }, [params]);
+    return roleDestinations[selectedRole];
+  }, [params, selectedRole]);
+
+  const finishAuth = async () => {
+    const currentUser = await base44.auth.me();
+    let role = currentUser.role === 'user' ? selectedRole : currentUser.role;
+
+    if (currentUser.role === 'user') {
+      const updated = await base44.auth.updateMe({ role: selectedRole });
+      role = updated.role;
+    }
+
+    if (role === 'restaurant' && !currentUser.restaurant_id) {
+      await base44.users.setupRestaurant({
+        name: restaurantName.trim() || currentUser.full_name || 'New Restaurant',
+      });
+    }
+
+    navigate(hasRedirect ? redirectTo : roleDestinations[role] || '/browse', { replace: true });
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -51,7 +87,7 @@ export default function Login() {
         });
 
         if (signInError) throw signInError;
-        navigate(redirectTo, { replace: true });
+        await finishAuth();
         return;
       }
 
@@ -69,6 +105,8 @@ export default function Login() {
         options: {
           data: {
             full_name: fullName.trim(),
+            role: selectedRole,
+            restaurant_name: restaurantName.trim(),
           },
         },
       });
@@ -76,14 +114,19 @@ export default function Login() {
       if (signUpError) throw signUpError;
 
       if (data.session) {
-        navigate('/select-role', { replace: true });
+        if (selectedRole === 'restaurant') {
+          await base44.users.setupRestaurant({
+            name: restaurantName.trim() || fullName.trim() || 'New Restaurant',
+          });
+        }
+        navigate(roleDestinations[selectedRole], { replace: true });
         return;
       }
 
       setMode('signin');
       setPassword('');
       setConfirmPassword('');
-      setMessage('Account created. Check your email to confirm your address, then sign in.');
+      setMessage(`Account created for ${roleLabels[selectedRole]}. Check your email to confirm your address, then sign in.`);
     } catch (submitError) {
       if (submitError instanceof TypeError && submitError.message === 'Failed to fetch') {
         setError('Could not reach Supabase. Check your NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY values, then restart the app or redeploy on Vercel.');
@@ -107,21 +150,34 @@ export default function Login() {
           </h1>
           <p className="text-sm text-muted-foreground mb-6">
             {mode === 'signin'
-              ? 'Use your email and password to get back into your account.'
-              : 'Create an account, then choose how you want to use MelaEat.'}
+              ? `Continue as a ${roleLabels[selectedRole]}.`
+              : `Create your ${roleLabels[selectedRole]} account.`}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'signup' && (
-              <div>
-                <Label className="mb-2 block">Full name</Label>
-                <Input
-                  value={fullName}
-                  onChange={(event) => setFullName(event.target.value)}
-                  placeholder="Senay Abraha"
-                  required
-                />
-              </div>
+              <>
+                <div>
+                  <Label className="mb-2 block">Full name</Label>
+                  <Input
+                    value={fullName}
+                    onChange={(event) => setFullName(event.target.value)}
+                    placeholder="Senay Abraha"
+                    required
+                  />
+                </div>
+                {selectedRole === 'restaurant' && (
+                  <div>
+                    <Label className="mb-2 block">Restaurant name</Label>
+                    <Input
+                      value={restaurantName}
+                      onChange={(event) => setRestaurantName(event.target.value)}
+                      placeholder="MelaEat Kitchen"
+                      required
+                    />
+                  </div>
+                )}
+              </>
             )}
             <div>
               <Label className="mb-2 block">Email</Label>
@@ -185,7 +241,7 @@ export default function Login() {
 
           {mode === 'signin' && (
             <p className="mt-2 text-xs text-muted-foreground">
-              New here? <Link className="text-primary hover:underline" to="/login?mode=signup">Start with sign up</Link>
+              New here? <Link className="text-primary hover:underline" to={`/login?mode=signup&role=${selectedRole}`}>Start with sign up</Link>
             </p>
           )}
         </div>

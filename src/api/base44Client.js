@@ -42,7 +42,7 @@ const mapAuthUser = (authUser, profile = {}) => ({
   id: authUser.id,
   email: authUser.email,
   full_name: profile.full_name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
-  role: profile.role || authUser.user_metadata?.role || 'user',
+  role: profile.role || authUser.user_metadata?.role || 'customer',
   ...profile,
 });
 
@@ -60,7 +60,7 @@ const ensureProfile = async (authUser) => {
     id: authUser.id,
     email: authUser.email,
     full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
-    role: authUser.user_metadata?.role || 'user',
+    role: authUser.user_metadata?.role || 'customer',
   };
   const { data, error: insertError } = await supabase
     .from('profiles')

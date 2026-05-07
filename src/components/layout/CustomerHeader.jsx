@@ -27,7 +27,7 @@ export default function CustomerHeader() {
   }, []);
 
   const navLinks = [
-    { to: '/', label: 'Browse' },
+    { to: '/browse', label: 'Browse' },
     { to: '/orders', label: 'Orders' },
     { to: '/favorites', label: 'Favorites' },
   ];

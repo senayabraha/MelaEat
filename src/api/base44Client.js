@@ -191,9 +191,9 @@ export const base44 = {
       return { ...user, ...data };
     },
 
-    redirectToLogin(returnTo = window.location.href) {
+    redirectToLogin(returnTo = window.location.href, role = 'customer') {
       const redirect = encodeURIComponent(returnTo);
-      window.location.href = `/login?redirect=${redirect}`;
+      window.location.href = `/login/${role}?redirect=${redirect}`;
     },
 
     async logout() {

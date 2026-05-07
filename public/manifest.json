@@ -1,0 +1,9 @@
+{
+  "name": "MelaEat",
+  "short_name": "MelaEat",
+  "description": "Ethiopian food delivery",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#111827"
+}

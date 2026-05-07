@@ -1,0 +1,134 @@
+{
+  "name": "Restaurant",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Restaurant name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description / tagline"
+    },
+    "owner_email": {
+      "type": "string",
+      "description": "Email of the restaurant owner user"
+    },
+    "cover_image_url": {
+      "type": "string",
+      "description": "Hero/cover image URL"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "Restaurant logo URL"
+    },
+    "cuisines": {
+      "type": "array",
+      "description": "Cuisine tags (e.g. Ethiopian, Italian, Vegan)",
+      "items": {
+        "type": "string"
+      }
+    },
+    "city": {
+      "type": "string",
+      "description": "City"
+    },
+    "address_text": {
+      "type": "string",
+      "description": "Full address"
+    },
+    "lat": {
+      "type": "number",
+      "description": "Latitude"
+    },
+    "lng": {
+      "type": "number",
+      "description": "Longitude"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Contact phone"
+    },
+    "is_open_manual": {
+      "type": "boolean",
+      "default": true,
+      "description": "Manual open/closed toggle by restaurant"
+    },
+    "operating_hours": {
+      "type": "object",
+      "description": "Weekly operating hours, day -> {open, close, closed}",
+      "properties": {
+        "mon": {
+          "type": "object"
+        },
+        "tue": {
+          "type": "object"
+        },
+        "wed": {
+          "type": "object"
+        },
+        "thu": {
+          "type": "object"
+        },
+        "fri": {
+          "type": "object"
+        },
+        "sat": {
+          "type": "object"
+        },
+        "sun": {
+          "type": "object"
+        }
+      }
+    },
+    "delivery_fee": {
+      "type": "number",
+      "default": 50,
+      "description": "Base delivery fee in ETB"
+    },
+    "minimum_order": {
+      "type": "number",
+      "default": 0,
+      "description": "Minimum order subtotal in ETB"
+    },
+    "estimated_prep_minutes": {
+      "type": "number",
+      "default": 25,
+      "description": "Estimated prep time"
+    },
+    "rating": {
+      "type": "number",
+      "default": 0,
+      "description": "Average rating"
+    },
+    "total_ratings": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of ratings"
+    },
+    "is_featured": {
+      "type": "boolean",
+      "default": false,
+      "description": "Featured on homepage"
+    },
+    "commission_rate": {
+      "type": "number",
+      "default": 0.15,
+      "description": "Platform commission percentage"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "suspended"
+      ],
+      "default": "approved",
+      "description": "Admin approval status"
+    }
+  },
+  "required": [
+    "name",
+    "city"
+  ]
+}

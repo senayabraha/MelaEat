@@ -1,0 +1,60 @@
+{
+  "name": "Promotion",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "description": "Promo code"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "description": "Restaurant id, blank for platform-wide"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "discount_type": {
+      "type": "string",
+      "enum": [
+        "percentage",
+        "fixed",
+        "free_delivery"
+      ],
+      "default": "percentage"
+    },
+    "discount_value": {
+      "type": "number"
+    },
+    "min_order": {
+      "type": "number",
+      "default": 0
+    },
+    "starts_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ends_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "usage_limit": {
+      "type": "number"
+    },
+    "times_used": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "code",
+    "discount_type",
+    "discount_value"
+  ]
+}

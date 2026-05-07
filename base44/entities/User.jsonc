@@ -1,0 +1,49 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user",
+        "customer",
+        "restaurant_owner",
+        "delivery_driver"
+      ],
+      "default": "user"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "favorite_restaurants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "loyalty_points": {
+      "type": "number",
+      "default": 0
+    },
+    "saved_lat": {
+      "type": "number"
+    },
+    "saved_lng": {
+      "type": "number"
+    },
+    "saved_address": {
+      "type": "string"
+    },
+    "vehicle_type": {
+      "type": "string"
+    },
+    "license_plate": {
+      "type": "string"
+    },
+    "is_online": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

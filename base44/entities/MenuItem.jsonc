@@ -1,0 +1,89 @@
+{
+  "name": "MenuItem",
+  "type": "object",
+  "properties": {
+    "restaurant_id": {
+      "type": "string",
+      "description": "Owning restaurant id"
+    },
+    "category_id": {
+      "type": "string",
+      "description": "Menu category id"
+    },
+    "name": {
+      "type": "string",
+      "description": "Dish name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description"
+    },
+    "price": {
+      "type": "number",
+      "description": "Price in ETB"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Dish image URL"
+    },
+    "in_stock": {
+      "type": "boolean",
+      "default": true,
+      "description": "Item availability"
+    },
+    "is_featured": {
+      "type": "boolean",
+      "default": false,
+      "description": "Featured/promoted item"
+    },
+    "is_vegetarian": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_spicy": {
+      "type": "boolean",
+      "default": false
+    },
+    "options": {
+      "type": "array",
+      "description": "Customization option groups (e.g. size, extras)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "group_name": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "multi_select": {
+            "type": "boolean"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "price_delta": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sort_order": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "restaurant_id",
+    "name",
+    "price"
+  ]
+}

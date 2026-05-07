@@ -1,7 +1,6 @@
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -13,37 +12,31 @@ export default function AdminUsers() {
     queryFn: () => base44.entities.User.list('-created_date', 500),
   });
 
-  const setRole = async (u, role) => {
-    await base44.entities.User.update(u.id, { role });
+  const setRole = async (user, role) => {
+    await base44.entities.User.update(user.id, { role });
     qc.invalidateQueries({ queryKey: ['admin-users-full'] });
     toast({ title: 'Role updated' });
   };
 
-  const invite = async () => {
-    const email = prompt('Email to invite?');
-    const role = prompt('Role (customer / restaurant / driver / admin)?', 'customer');
-    if (!email || !role) return;
-    await base44.users.inviteUser(email, role === 'admin' ? 'admin' : 'user');
-    toast({ title: 'User invited' });
-  };
-
   return (
     <div className="p-6 sm:p-8 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6">
         <h1 className="font-display text-3xl font-semibold">Users</h1>
-        <Button onClick={invite}>Invite user</Button>
+        <p className="text-sm text-muted-foreground mt-2">
+          Users create their own accounts from the sign up screen. Use this page to review accounts and change roles after signup.
+        </p>
       </div>
       <div className="bg-card border border-border rounded-2xl divide-y divide-border">
-        {users.map(u => (
-          <div key={u.id} className="p-4 flex items-center gap-4">
+        {users.map((user) => (
+          <div key={user.id} className="p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold">
-              {(u.full_name || 'U').charAt(0)}
+              {(user.full_name || 'U').charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{u.full_name}</p>
-              <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+              <p className="font-medium truncate">{user.full_name}</p>
+              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
             </div>
-            <Select value={u.role} onValueChange={(v) => setRole(u, v)}>
+            <Select value={user.role} onValueChange={(value) => setRole(user, value)}>
               <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="customer">Customer</SelectItem>

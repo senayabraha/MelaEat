@@ -25,6 +25,7 @@ const mapAuthUser = (authUser, profile = {}) => ({
   id: authUser.id,
   email: authUser.email,
   full_name: profile.full_name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
+  role: profile.role || authUser.user_metadata?.role || 'user',
   ...profile,
 });
 
@@ -42,7 +43,7 @@ const ensureProfile = async (authUser) => {
     id: authUser.id,
     email: authUser.email,
     full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
-    role: 'user',
+    role: authUser.user_metadata?.role || 'user',
   };
   const { data, error: insertError } = await supabase
     .from('profiles')
@@ -59,6 +60,18 @@ const getCurrentUser = async () => {
   if (error) throw error;
   if (!data.user) throw new Error('Authentication required');
   return ensureProfile(data.user);
+};
+
+const getSessionAccessToken = async () => {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error('Authentication required');
+  }
+
+  return session.access_token;
 };
 
 const applySort = (query, sort) => {
@@ -173,14 +186,44 @@ export const base44 = {
   },
 
   users: {
-    async inviteUser(email, role = 'user') {
-      const { error } = await supabase.functions.invoke('invite-user', {
-        body: { email, role },
+    async setupRestaurant({ name }) {
+      const accessToken = await getSessionAccessToken();
+      const response = await fetch('/api/restaurant/setup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ name }),
       });
-      if (error) {
-        console.warn('Create a Supabase Edge Function named invite-user to send admin invites.', error);
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: 'Failed to set up restaurant' }));
+        throw new Error(payload.error || 'Failed to set up restaurant');
       }
-      return true;
+
+      return response.json();
+    },
+  },
+
+  orders: {
+    async submitRating(orderId, payload) {
+      const accessToken = await getSessionAccessToken();
+      const response = await fetch(`/api/orders/${orderId}/rate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: 'Failed to save rating' }));
+        throw new Error(result.error || 'Failed to save rating');
+      }
+
+      return response.json();
     },
   },
 

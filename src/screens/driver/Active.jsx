@@ -80,7 +80,7 @@ export default function DriverActive() {
 
       {active.length > 0 && (
         <div className="space-y-4 mb-10">
-          {active.map(o => <ActiveCard key={o.id} order={o} onUpdateStatus={updateStatus} onReportIssue={reportIssue} userEmail={user.email} />)}
+          {active.map(o => <ActiveCard key={o.id} order={o} onUpdateStatus={updateStatus} onReportIssue={reportIssue} />)}
         </div>
       )}
 
@@ -111,7 +111,7 @@ export default function DriverActive() {
   );
 }
 
-function ActiveCard({ order, onUpdateStatus, onReportIssue, userEmail }) {
+function ActiveCard({ order, onUpdateStatus, onReportIssue }) {
   const next = (() => {
     if (order.status === 'ready_for_pickup') return { label: 'Picked up', value: 'picked_up' };
     if (order.status === 'picked_up') return { label: "I'm on the way", value: 'on_the_way' };

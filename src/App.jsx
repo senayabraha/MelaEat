@@ -20,6 +20,7 @@ import Orders from '@/screens/Orders';
 import OrderTracking from '@/screens/OrderTracking';
 import Favorites from '@/screens/Favorites';
 import Profile from '@/screens/Profile';
+import Addresses from '@/screens/Addresses';
 import Login from '@/screens/Login';
 
 import RestaurantOverview from '@/screens/restaurant/Overview';
@@ -74,6 +75,7 @@ const AuthenticatedApp = () => {
         <Route path="/order/:id" element={<OrderTracking />} />
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/addresses" element={<Addresses />} />
       </Route>
 
       {/* Restaurant dashboard */}

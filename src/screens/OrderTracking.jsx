@@ -25,6 +25,15 @@ export default function OrderTracking() {
     refetchInterval: 8000,
   });
 
+  const { data: driverProfile } = useQuery({
+    queryKey: ['driver-profile', order?.driver_email],
+    queryFn: async () => {
+      const profiles = await base44.entities.User.filter({ email: order.driver_email }, '-created_date', 1);
+      return profiles[0] || null;
+    },
+    enabled: !!order?.driver_email,
+  });
+
   useEffect(() => {
     const unsub = base44.entities.Order.subscribe((evt) => {
       if (evt.id === id) refetch();
@@ -33,7 +42,7 @@ export default function OrderTracking() {
   }, [id, refetch]);
 
   const submitRating = async () => {
-    await base44.entities.Order.update(id, {
+    await base44.orders.submitRating(id, {
       customer_rating_restaurant: restaurantStars,
       customer_rating_driver: driverStars,
       customer_review: review,
@@ -83,9 +92,18 @@ export default function OrderTracking() {
                 </div>
                 <div className="flex-1">
                   <p className="font-medium">{order.driver_name}</p>
-                  <p className="text-sm text-muted-foreground">On the way to you</p>
+                  <p className="text-sm text-muted-foreground">
+                    {driverProfile?.phone ? driverProfile.phone : 'On the way to you'}
+                  </p>
                 </div>
-                <Button variant="outline" size="icon"><Phone className="w-4 h-4" /></Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={!driverProfile?.phone}
+                  onClick={() => window.open(`tel:${driverProfile.phone}`)}
+                >
+                  <Phone className="w-4 h-4" />
+                </Button>
               </div>
             </section>
           )}
@@ -149,7 +167,7 @@ export default function OrderTracking() {
               <p className="text-sm font-medium mb-2">Comments</p>
               <Textarea value={review} onChange={(e) => setReview(e.target.value)} rows={3} placeholder="Tell us more (optional)" />
             </div>
-            <Button onClick={submitRating} className="w-full">Submit</Button>
+            <Button onClick={submitRating} className="w-full" disabled={restaurantStars === 0}>Submit</Button>
           </div>
         </DialogContent>
       </Dialog>

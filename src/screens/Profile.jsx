@@ -1,29 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Award } from 'lucide-react';
 
 export default function Profile() {
   const [user, setUser] = useState(null);
+  const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [addressText, setAddressText] = useState('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    base44.auth.me().then((u) => {
-      setUser(u);
-      setPhone(u.phone || '');
+    base44.auth.me().then((currentUser) => {
+      setUser(currentUser);
+      setFullName(currentUser.full_name || '');
+      setPhone(currentUser.phone || '');
+      setAddressText(currentUser.default_address_text || '');
     }).catch(() => base44.auth.redirectToLogin(window.location.href));
   }, []);
 
   const save = async () => {
     setSaving(true);
-    await base44.auth.updateMe({ phone });
-    toast({ title: 'Profile updated' });
-    setSaving(false);
+    try {
+      const updated = await base44.auth.updateMe({
+        full_name: fullName.trim(),
+        phone,
+        default_address_text: addressText.trim(),
+      });
+      setUser(updated);
+      toast({ title: 'Profile updated' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!user) return null;
@@ -44,10 +57,23 @@ export default function Profile() {
         </div>
         <div className="space-y-4">
           <div>
+            <Label className="mb-2 block">Full name</Label>
+            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your name" />
+          </div>
+          <div>
             <Label className="mb-2 block">Phone</Label>
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+251 ..." />
           </div>
-          <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
+          <div>
+            <Label className="mb-2 block">Default delivery address</Label>
+            <Textarea
+              value={addressText}
+              onChange={(e) => setAddressText(e.target.value)}
+              rows={3}
+              placeholder="Bole, near Edna Mall..."
+            />
+          </div>
+          <Button onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</Button>
         </div>
       </div>
 

@@ -12,6 +12,7 @@ create table if not exists public.profiles (
   default_lng numeric,
   default_address_text text,
   driver_status text not null default 'offline' check (driver_status in ('offline', 'online', 'on_delivery')),
+  driver_approval_status text not null default 'approved' check (driver_approval_status in ('pending', 'approved', 'suspended')),
   driver_vehicle_type text,
   driver_license_plate text,
   driver_rating numeric not null default 5,
@@ -20,6 +21,60 @@ create table if not exists public.profiles (
   created_date timestamptz not null default now(),
   updated_date timestamptz not null default now()
 );
+
+alter table public.profiles
+add column if not exists driver_approval_status text not null default 'approved'
+check (driver_approval_status in ('pending', 'approved', 'suspended'));
+
+update public.profiles
+set driver_approval_status = 'pending'
+where role = 'driver'
+  and driver_approval_status is null;
+
+create or replace function public.set_profile_onboarding_defaults()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.role = 'driver' and (new.driver_approval_status is null or new.driver_approval_status = 'approved') then
+    new.driver_approval_status := 'pending';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists set_profile_onboarding_defaults_trigger on public.profiles;
+create trigger set_profile_onboarding_defaults_trigger
+before insert on public.profiles
+for each row execute function public.set_profile_onboarding_defaults();
+
+create or replace function public.prevent_profile_sensitive_self_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.role() = 'service_role' or public.is_admin() then
+    return new;
+  end if;
+
+  if old.role is distinct from new.role
+    or old.restaurant_id is distinct from new.restaurant_id
+    or old.driver_approval_status is distinct from new.driver_approval_status
+  then
+    raise exception 'Only admins can update role, restaurant link, or driver approval status.';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists prevent_profile_sensitive_self_update_trigger on public.profiles;
+create trigger prevent_profile_sensitive_self_update_trigger
+before update on public.profiles
+for each row execute function public.prevent_profile_sensitive_self_update();
 
 create table if not exists public.restaurants (
   id uuid primary key default gen_random_uuid(),
@@ -163,6 +218,7 @@ create index if not exists orders_customer_idx on public.orders(customer_email);
 create index if not exists orders_restaurant_idx on public.orders(restaurant_id);
 create index if not exists orders_driver_idx on public.orders(driver_email);
 create index if not exists chat_messages_order_idx on public.chat_messages(order_id);
+create index if not exists profiles_driver_approval_idx on public.profiles(driver_approval_status);
 
 create or replace function public.current_user_email()
 returns text
@@ -276,6 +332,7 @@ drop policy if exists "menu item write managed restaurants" on public.menu_items
 drop policy if exists "order read access" on public.orders;
 drop policy if exists "order insert customer or admin" on public.orders;
 drop policy if exists "order update participants" on public.orders;
+drop policy if exists "order update admin only" on public.orders;
 drop policy if exists "order delete admin only" on public.orders;
 drop policy if exists "promotion read access" on public.promotions;
 drop policy if exists "promotion write managed restaurants" on public.promotions;
@@ -379,7 +436,21 @@ with check (public.can_manage_restaurant(restaurant_id));
 create policy "order read access" on public.orders
 for select
 to authenticated
-using (public.can_access_order(id));
+using (
+  public.can_access_order(id)
+  or (
+    public.current_user_role() = 'driver'
+    and status = 'ready_for_pickup'
+    and driver_email is null
+    and exists (
+      select 1
+      from public.profiles p
+      where p.id = auth.uid()
+        and p.driver_approval_status = 'approved'
+        and p.driver_status = 'online'
+    )
+  )
+);
 
 create policy "order insert customer or admin" on public.orders
 for insert
@@ -389,11 +460,11 @@ with check (
   or customer_email = public.current_user_email()
 );
 
-create policy "order update participants" on public.orders
+create policy "order update admin only" on public.orders
 for update
 to authenticated
-using (public.can_access_order(id))
-with check (public.can_access_order(id));
+using (public.is_admin())
+with check (public.is_admin());
 
 create policy "order delete admin only" on public.orders
 for delete

@@ -77,7 +77,7 @@ export async function POST(request) {
           owner_email: user.email,
           city: 'Addis Ababa',
           description: `Managed by ${profile?.full_name || user.email}`,
-          status: 'approved',
+          status: 'pending',
           is_open_manual: false,
         })
         .select()

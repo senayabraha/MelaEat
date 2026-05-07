@@ -203,6 +203,26 @@ export const base44 = {
   },
 
   users: {
+    async completeRole(role) {
+      const accessToken = await getSessionAccessToken();
+      const response = await fetch('/api/profile/complete-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ role }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: 'Failed to complete role' }));
+        throw new Error(payload.error || 'Failed to complete role');
+      }
+
+      const { profile } = await response.json();
+      return profile;
+    },
+
     async setupRestaurant({ name }) {
       const accessToken = await getSessionAccessToken();
       const response = await fetch('/api/restaurant/setup', {
@@ -224,6 +244,25 @@ export const base44 = {
   },
 
   orders: {
+    async action(orderId, payload) {
+      const accessToken = await getSessionAccessToken();
+      const response = await fetch(`/api/orders/${orderId}/action`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: 'Failed to update order' }));
+        throw new Error(result.error || 'Failed to update order');
+      }
+
+      return response.json();
+    },
+
     async submitRating(orderId, payload) {
       const accessToken = await getSessionAccessToken();
       const response = await fetch(`/api/orders/${orderId}/rate`, {

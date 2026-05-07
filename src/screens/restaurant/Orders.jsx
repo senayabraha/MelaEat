@@ -4,11 +4,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import OrderTicket from '@/components/restaurant/OrderTicket';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function RestaurantOrders() {
   const { user } = useOutletContext();
   const [restaurant, setRestaurant] = useState(null);
+  const [rejectingOrder, setRejectingOrder] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -36,22 +41,30 @@ export default function RestaurantOrders() {
   const refresh = () => qc.invalidateQueries({ queryKey: ['restaurant-orders-full'] });
 
   const accept = async (o) => {
-    await base44.entities.Order.update(o.id, { status: 'accepted', accepted_at: new Date().toISOString() });
+    await base44.orders.action(o.id, { action: 'accept' });
     toast({ title: 'Order accepted' });
     refresh();
   };
   const reject = async (o) => {
-    const reason = prompt('Reason for rejection?') || 'Restaurant unable to fulfill';
-    await base44.entities.Order.update(o.id, { status: 'rejected', rejection_reason: reason });
+    setRejectingOrder(o);
+    setRejectReason('');
+  };
+  const confirmReject = async () => {
+    if (!rejectingOrder) return;
+    await base44.orders.action(rejectingOrder.id, {
+      action: 'reject',
+      reason: rejectReason,
+    });
+    setRejectingOrder(null);
     toast({ title: 'Order rejected' });
     refresh();
   };
   const advance = async (o, value) => {
-    await base44.entities.Order.update(o.id, { status: value });
+    await base44.orders.action(o.id, { action: value });
     refresh();
   };
   const assign = async (o, driver) => {
-    await base44.entities.Order.update(o.id, { driver_email: driver.email, driver_name: driver.full_name });
+    await base44.orders.action(o.id, { action: 'assign_driver', driver_email: driver.email });
     toast({ title: `Assigned to ${driver.full_name}` });
     refresh();
   };
@@ -96,6 +109,26 @@ export default function RestaurantOrders() {
           </TabsContent>
         ))}
       </Tabs>
+
+      <Dialog open={!!rejectingOrder} onOpenChange={(open) => !open && setRejectingOrder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject order</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+              rows={3}
+              placeholder="Reason for rejection"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setRejectingOrder(null)}>Cancel</Button>
+              <Button variant="destructive" onClick={confirmReject}>Reject order</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

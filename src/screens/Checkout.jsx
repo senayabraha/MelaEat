@@ -32,7 +32,7 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (itemCount === 0) navigate('/');
+    if (itemCount === 0) navigate('/browse');
   }, [itemCount, navigate]);
 
   useEffect(() => {
@@ -143,7 +143,7 @@ export default function Checkout() {
     };
     const created = await base44.entities.Order.create(order);
     if (appliedPromo) {
-      await base44.entities.Promotion.update(appliedPromo.id, { times_used: (appliedPromo.times_used || 0) + 1 });
+      base44.entities.Promotion.update(appliedPromo.id, { times_used: (appliedPromo.times_used || 0) + 1 }).catch(() => {});
     }
     await base44.auth.updateMe({ phone, default_lat: lat, default_lng: lng, default_address_text: addressText });
     clear();

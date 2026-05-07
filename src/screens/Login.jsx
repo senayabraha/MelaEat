@@ -56,7 +56,7 @@ export default function Login() {
     let role = currentUser.role === 'user' ? selectedRole : currentUser.role;
 
     if (currentUser.role === 'user') {
-      const updated = await base44.auth.updateMe({ role: selectedRole });
+      const updated = await base44.users.completeRole(selectedRole);
       role = updated.role;
     }
 

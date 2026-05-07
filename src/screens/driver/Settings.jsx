@@ -8,7 +8,8 @@ import { useToast } from '@/components/ui/use-toast';
 
 export default function DriverSettings() {
   const { user, refreshUser } = useOutletContext();
-  const [online, setOnline] = useState(user.driver_status !== 'offline');
+  const approved = !user.driver_approval_status || user.driver_approval_status === 'approved';
+  const [online, setOnline] = useState(approved && user.driver_status !== 'offline');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -16,7 +17,7 @@ export default function DriverSettings() {
     setSaving(true);
     try {
       await base44.auth.updateMe({
-        driver_status: online ? 'online' : 'offline',
+        driver_status: approved && online ? 'online' : 'offline',
       });
       await refreshUser();
       toast({ title: 'Settings saved' });
@@ -34,10 +35,12 @@ export default function DriverSettings() {
           <div>
             <Label className="text-base">Available for deliveries</Label>
             <p className="text-sm text-muted-foreground mt-1">
-              Turn this on when you want pickup offers to appear.
+              {approved
+                ? 'Turn this on when you want pickup offers to appear.'
+                : `Your driver account is ${user.driver_approval_status || 'pending'} and cannot go online yet.`}
             </p>
           </div>
-          <Switch checked={online} onCheckedChange={setOnline} />
+          <Switch checked={online} onCheckedChange={setOnline} disabled={!approved} />
         </div>
 
         <div className="border-t border-border pt-5">

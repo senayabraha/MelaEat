@@ -18,6 +18,12 @@ export default function AdminUsers() {
     toast({ title: 'Role updated' });
   };
 
+  const setDriverApproval = async (user, driver_approval_status) => {
+    await base44.entities.User.update(user.id, { driver_approval_status });
+    qc.invalidateQueries({ queryKey: ['admin-users-full'] });
+    toast({ title: 'Driver approval updated' });
+  };
+
   return (
     <div className="p-6 sm:p-8 max-w-5xl">
       <div className="mb-6">
@@ -45,6 +51,19 @@ export default function AdminUsers() {
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
+            {user.role === 'driver' && (
+              <Select
+                value={user.driver_approval_status || 'approved'}
+                onValueChange={(value) => setDriverApproval(user, value)}
+              >
+                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
         ))}
       </div>

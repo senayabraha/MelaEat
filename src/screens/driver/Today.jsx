@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast';
 export default function DriverToday() {
   const { user, refreshUser } = useOutletContext();
   const { toast } = useToast();
+  const approved = !user.driver_approval_status || user.driver_approval_status === 'approved';
   const online = user.driver_status === 'online' || user.driver_status === 'on_delivery';
 
   const { data: orders = [] } = useQuery({
@@ -22,6 +23,10 @@ export default function DriverToday() {
   const todayEarnings = todayDeliveries.reduce((s, o) => s + (o.delivery_fee || 0), 0);
 
   const toggle = async (v) => {
+    if (!approved) {
+      toast({ title: 'Your driver account is waiting for approval', variant: 'destructive' });
+      return;
+    }
     await base44.auth.updateMe({ driver_status: v ? 'online' : 'offline' });
     await refreshUser();
     toast({ title: v ? "You're online" : 'Going offline' });
@@ -33,11 +38,16 @@ export default function DriverToday() {
         <div>
           <p className="text-sm text-muted-foreground">Hi {user.full_name?.split(' ')[0]}</p>
           <h1 className="font-display text-3xl font-semibold">Today</h1>
+          {!approved && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Driver approval status: {user.driver_approval_status || 'pending'}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-3 bg-card border border-border rounded-full px-5 py-2.5">
           <span className={`w-2 h-2 rounded-full ${online ? 'bg-success' : 'bg-muted-foreground'}`} />
           <span className="text-sm font-medium">{online ? 'Online' : 'Offline'}</span>
-          <Switch checked={online} onCheckedChange={toggle} />
+          <Switch checked={online} onCheckedChange={toggle} disabled={!approved} />
         </div>
       </div>
 

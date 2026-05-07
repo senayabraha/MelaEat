@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminRestaurants() {
   const qc = useQueryClient();
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({ name: '', owner_email: '', city: 'Addis Ababa' });
   const { data: restaurants = [] } = useQuery({
     queryKey: ['admin-restaurants-full'],
     queryFn: () => base44.entities.Restaurant.list('-created_date', 500),
@@ -17,10 +22,15 @@ export default function AdminRestaurants() {
   };
 
   const create = async () => {
-    const name = prompt('Restaurant name?');
-    const ownerEmail = prompt('Owner email?');
-    if (!name || !ownerEmail) return;
-    await base44.entities.Restaurant.create({ name, owner_email: ownerEmail, city: 'Addis Ababa', status: 'approved' });
+    if (!form.name.trim() || !form.owner_email.trim()) return;
+    await base44.entities.Restaurant.create({
+      name: form.name.trim(),
+      owner_email: form.owner_email.trim().toLowerCase(),
+      city: form.city.trim() || 'Addis Ababa',
+      status: 'pending',
+    });
+    setShowCreate(false);
+    setForm({ name: '', owner_email: '', city: 'Addis Ababa' });
     qc.invalidateQueries({ queryKey: ['admin-restaurants-full'] });
   };
 
@@ -28,7 +38,7 @@ export default function AdminRestaurants() {
     <div className="p-6 sm:p-8 max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display text-3xl font-semibold">Restaurants</h1>
-        <Button onClick={create}>Add restaurant</Button>
+        <Button onClick={() => setShowCreate(true)}>Add restaurant</Button>
       </div>
       <div className="bg-card border border-border rounded-2xl divide-y divide-border">
         {restaurants.map(r => (
@@ -48,6 +58,32 @@ export default function AdminRestaurants() {
           </div>
         ))}
       </div>
+
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add restaurant</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="mb-2 block">Restaurant name</Label>
+              <Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+            </div>
+            <div>
+              <Label className="mb-2 block">Owner email</Label>
+              <Input value={form.owner_email} onChange={(event) => setForm({ ...form, owner_email: event.target.value })} />
+            </div>
+            <div>
+              <Label className="mb-2 block">City</Label>
+              <Input value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
+              <Button onClick={create} disabled={!form.name.trim() || !form.owner_email.trim()}>Create</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -33,7 +33,18 @@ export default function RestaurantOverview() {
     return (
       <div className="p-8 max-w-3xl">
         <h1 className="font-display text-3xl font-semibold mb-2">Welcome</h1>
-        <p className="text-muted-foreground">No restaurant linked to your account yet. Contact admin to get set up.</p>
+        <p className="text-muted-foreground">No restaurant linked to your account yet. Finish setup or contact admin.</p>
+      </div>
+    );
+  }
+
+  if (restaurant.status !== 'approved') {
+    return (
+      <div className="p-8 max-w-3xl">
+        <h1 className="font-display text-3xl font-semibold mb-2">{restaurant.name}</h1>
+        <p className="text-muted-foreground">
+          Your restaurant is {restaurant.status}. You can prepare your profile, menu, and settings while admin reviews it.
+        </p>
       </div>
     );
   }

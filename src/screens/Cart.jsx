@@ -18,7 +18,7 @@ export default function Cart() {
         <h1 className="font-display text-3xl font-semibold mb-2">Your cart is empty</h1>
         <p className="text-muted-foreground mb-6">Discover restaurants and start your order.</p>
         <Button asChild className="rounded-full px-6">
-          <Link to="/">Browse restaurants</Link>
+          <Link to="/browse">Browse restaurants</Link>
         </Button>
       </div>
     );

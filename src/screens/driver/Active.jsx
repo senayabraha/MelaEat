@@ -3,6 +3,8 @@ import { useOutletContext } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Phone, MapPin, ExternalLink, AlertTriangle } from 'lucide-react';
 import { formatETB, statusLabel, statusColor } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
@@ -12,6 +14,8 @@ export default function DriverActive() {
   const { user } = useOutletContext();
   const qc = useQueryClient();
   const { toast } = useToast();
+  const [issueOrder, setIssueOrder] = React.useState(null);
+  const [issueDescription, setIssueDescription] = React.useState('');
 
   // Available orders (ready, no driver yet)
   const { data: available = [] } = useQuery({
@@ -40,37 +44,31 @@ export default function DriverActive() {
   };
 
   const accept = async (o) => {
-    await base44.entities.Order.update(o.id, { driver_email: user.email, driver_name: user.full_name });
-    await base44.auth.updateMe({ driver_status: 'on_delivery' });
+    await base44.orders.action(o.id, { action: 'driver_accept' });
     toast({ title: 'Delivery accepted' });
     refresh();
   };
 
   const updateStatus = async (o, status) => {
-    const patch = { status };
-    if (status === 'picked_up') patch.picked_up_at = new Date().toISOString();
-    if (status === 'delivered') {
-      patch.delivered_at = new Date().toISOString();
-      await base44.auth.updateMe({
-        driver_status: 'online',
-        driver_total_deliveries: (user.driver_total_deliveries || 0) + 1,
-        driver_total_earnings: (user.driver_total_earnings || 0) + (o.delivery_fee || 0),
-      });
-    }
-    await base44.entities.Order.update(o.id, patch);
+    await base44.orders.action(o.id, { action: status });
     refresh();
   };
 
   const reportIssue = async (o) => {
-    const desc = prompt('Describe the issue:');
-    if (!desc) return;
+    setIssueOrder(o);
+    setIssueDescription('');
+  };
+
+  const submitIssue = async () => {
+    if (!issueDescription.trim() || !issueOrder) return;
     await base44.entities.IssueReport.create({
-      order_id: o.id,
+      order_id: issueOrder.id,
       reporter_email: user.email,
       reporter_role: 'driver',
       category: 'other',
-      description: desc,
+      description: issueDescription.trim(),
     });
+    setIssueOrder(null);
     toast({ title: 'Issue reported' });
   };
 
@@ -107,6 +105,26 @@ export default function DriverActive() {
           ))}
         </div>
       )}
+
+      <Dialog open={!!issueOrder} onOpenChange={(open) => !open && setIssueOrder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report an issue</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={issueDescription}
+              onChange={(event) => setIssueDescription(event.target.value)}
+              rows={4}
+              placeholder="Describe what happened"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIssueOrder(null)}>Cancel</Button>
+              <Button onClick={submitIssue} disabled={!issueDescription.trim()}>Submit issue</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

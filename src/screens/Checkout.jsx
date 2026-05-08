@@ -14,6 +14,18 @@ import { useToast } from '@/components/ui/use-toast';
 import MapPicker from '@/components/customer/MapPicker';
 import { MapPin, Loader2 } from 'lucide-react';
 
+const hasCoordinate = (value) => value !== null && value !== undefined && Number.isFinite(Number(value));
+
+const createIdempotencyKey = () => {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const value = Math.floor(Math.random() * 16);
+    const nibble = char === 'x' ? value : (value & 0x3) | 0x8;
+    return nibble.toString(16);
+  });
+};
+
 export default function Checkout() {
   const { cart, subtotal, clear, itemCount } = useCart();
   const navigate = useNavigate();
@@ -32,6 +44,7 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [savedAddresses, setSavedAddresses] = useState([]);
+  const [orderIdempotencyKey, setOrderIdempotencyKey] = useState(createIdempotencyKey);
 
   useEffect(() => {
     if (itemCount === 0) navigate('/browse');
@@ -43,8 +56,8 @@ export default function Checkout() {
         const me = await base44.auth.me();
         setUser(me);
         setPhone(me.phone || '');
-        if (me.default_lat) setLat(me.default_lat);
-        if (me.default_lng) setLng(me.default_lng);
+        if (hasCoordinate(me.default_lat)) setLat(Number(me.default_lat));
+        if (hasCoordinate(me.default_lng)) setLng(Number(me.default_lng));
         if (me.default_address_text) setAddressText(me.default_address_text);
         setSavedAddresses(Array.isArray(me.saved_addresses) ? me.saved_addresses : []);
       }
@@ -115,7 +128,7 @@ export default function Checkout() {
     }
     const nextErrors = {};
     if (!phone.trim()) nextErrors.phone = 'Phone number is required.';
-    if (!lat || !lng) nextErrors.location = 'Please place a delivery pin on the map.';
+    if (!hasCoordinate(lat) || !hasCoordinate(lng)) nextErrors.location = 'Please place a delivery pin on the map.';
     if (deliveryMode === 'schedule' && !scheduledTime) nextErrors.scheduledTime = 'Please pick a delivery date and time.';
     if (!restaurantLoading && statusReason) nextErrors.restaurant = statusReason;
     if (!restaurantLoading && belowMinimum) nextErrors.minimumOrder = `Minimum order is ${formatETB(restaurant.minimum_order)}.`;
@@ -138,15 +151,17 @@ export default function Checkout() {
         })),
         promo_code: appliedPromo?.code,
         payment_method: paymentMethod,
-        delivery_lat: lat,
-        delivery_lng: lng,
+        delivery_lat: Number(lat),
+        delivery_lng: Number(lng),
         delivery_address_text: addressText,
         delivery_notes: notes,
         is_scheduled: deliveryMode === 'schedule',
         scheduled_for: deliveryMode === 'schedule' ? new Date(scheduledTime).toISOString() : null,
+        idempotency_key: orderIdempotencyKey,
       };
       const { order: created } = await base44.orders.create(payload);
       clear();
+      setOrderIdempotencyKey(createIdempotencyKey());
       navigate(`/order/${created.id}`);
     } catch (error) {
       toast({
@@ -230,8 +245,9 @@ export default function Checkout() {
                   {savedAddresses.map((a, i) => (
                     <Button key={`${a.address_text}-${i}`} type="button" size="sm" variant="outline" onClick={() => {
                       setAddressText(a.address_text || '');
-                      if (a.lat) setLat(a.lat);
-                      if (a.lng) setLng(a.lng);
+                      if (hasCoordinate(a.lat)) setLat(Number(a.lat));
+                      if (hasCoordinate(a.lng)) setLng(Number(a.lng));
+                      setErrors((prev) => ({ ...prev, location: undefined }));
                     }}>
                       {a.label || `Address ${i + 1}`}
                     </Button>

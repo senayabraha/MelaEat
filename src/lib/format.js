@@ -25,12 +25,6 @@ export function timeAgo(iso) {
   return `${d}d ago`;
 }
 
-export function generateOrderNumber() {
-  const t = Date.now().toString().slice(-6);
-  const r = Math.random().toString(36).slice(2, 5).toUpperCase();
-  return `ME-${t}${r}`;
-}
-
 export function isOpenNow(restaurant) {
   if (!restaurant) return false;
   if (restaurant.is_open_manual === false) return false;

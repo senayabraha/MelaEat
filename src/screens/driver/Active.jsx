@@ -20,6 +20,8 @@ import { formatETB, statusLabel, statusColor } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
 import OrderChat from '@/components/orders/OrderChat';
 
+const hasCoordinate = (value) => value !== null && value !== undefined && Number.isFinite(Number(value));
+
 export default function DriverActive() {
   const { user, refreshUser } = useOutletContext();
   const qc = useQueryClient();
@@ -248,7 +250,7 @@ function ActiveCard({ order, onUpdateStatus, onReportIssue }) {
 }
 
 function Stop({ title, name, phone, address, lat, lng }) {
-  const destination = lat && lng ? `${lat},${lng}` : address || name;
+  const destination = hasCoordinate(lat) && hasCoordinate(lng) ? `${Number(lat)},${Number(lng)}` : address || name;
   const mapsUrl = destination ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}` : null;
   return (
     <div className="bg-secondary rounded-xl p-3">

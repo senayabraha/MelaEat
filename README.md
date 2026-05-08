@@ -19,7 +19,7 @@ NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=restaurant-assets
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
-3. Run the SQL in `sql/schema.sql` in your Supabase SQL editor.
+3. For a fresh database, run the SQL in `sql/schema.sql` in your Supabase SQL editor. For an existing database, apply migrations in `supabase/migrations` first.
 
 4. Run locally:
 
@@ -55,8 +55,10 @@ The app uses `SUPABASE_SERVICE_ROLE_KEY` only on the server for privileged flows
 
 ## Production Checklist
 
+- Apply `supabase/migrations/20260508000000_order_number_promo_atomic_rpc.sql` before deploying the updated checkout route.
 - Run the latest `sql/schema.sql` in Supabase SQL editor after pulling changes.
-- Confirm `order_status_events`, cash payment fields, and order triggers exist in Supabase.
+- Confirm `order_status_events`, cash payment fields, order triggers, `create_order_atomic`, and `next_order_number` exist in Supabase.
+- Confirm `orders.order_number` is unique/not null and `orders_customer_idempotency_key_idx` exists.
 - Confirm Storage has the `restaurant-assets` public bucket.
 - Confirm Vercel has all four environment variables from `.env.example`.
 - Place a test cash order and verify it starts as `cash_on_delivery`, then becomes `paid` when the driver marks it delivered.

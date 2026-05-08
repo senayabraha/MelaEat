@@ -1,16 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
+import { apiError, readJsonBody, validationError } from '@/lib/api/responses';
+import { createOrderRequestSchema } from '@/lib/orders/validation';
 
 const getBearerToken = (request) => {
   const authHeader = request.headers.get('authorization') || '';
   const [, token] = authHeader.split(' ');
   return token || null;
-};
-
-const generateOrderNumber = () => {
-  const t = Date.now().toString().slice(-6);
-  const r = Math.random().toString(36).slice(2, 5).toUpperCase();
-  return `ME-${t}${r}`;
 };
 
 const asNumber = (value) => Number(value || 0);
@@ -75,33 +71,23 @@ const buildOrderItems = (cartItems, menuItems) => {
   });
 };
 
-const applyPromotion = (promotion, subtotal, deliveryFee) => {
-  if (!promotion) return { discount: 0, delivery_fee: deliveryFee, promo_code: null };
-  if (promotion.min_order && subtotal < promotion.min_order) {
-    throw new Error(`Minimum order ${promotion.min_order} ETB required for this promo.`);
-  }
-
-  if (promotion.discount_type === 'free_delivery') {
-    return { discount: 0, delivery_fee: 0, promo_code: promotion.code };
-  }
-
-  const discount = promotion.discount_type === 'percentage'
-    ? Math.round((subtotal * asNumber(promotion.discount_value)) / 100)
-    : asNumber(promotion.discount_value);
-
-  return { discount: Math.min(discount, subtotal), delivery_fee: deliveryFee, promo_code: promotion.code };
+const promoRpcErrors = {
+  INVALID_PROMO_CODE: { status: 400, message: 'Invalid promo code.' },
+  PROMO_NOT_APPLICABLE: { status: 400, message: 'This promo is not valid for this restaurant.' },
+  PROMO_NOT_STARTED: { status: 400, message: 'This promo is not active yet.' },
+  PROMO_EXPIRED: { status: 400, message: 'This promo has expired.' },
+  PROMO_USAGE_LIMIT_REACHED: { status: 409, message: 'This promo has reached its usage limit.' },
+  PROMO_MIN_ORDER_NOT_MET: { status: 400, message: 'Minimum order required for this promo has not been met.' },
 };
 
-const writeOrderEvent = async (admin, orderId, actor, action, fromStatus, toStatus, note) => {
-  await admin.from('order_status_events').insert({
-    order_id: orderId,
-    actor_email: actor.email,
-    actor_role: actor.role,
-    action,
-    from_status: fromStatus,
-    to_status: toStatus,
-    note,
-  }).throwOnError();
+const mapCreateOrderRpcError = (error) => {
+  const raw = `${error?.message || ''} ${error?.details || ''}`;
+  const code = Object.keys(promoRpcErrors).find((candidate) => raw.includes(candidate));
+
+  if (!code) return null;
+
+  const mapped = promoRpcErrors[code];
+  return apiError(code, mapped.message, { status: mapped.status });
 };
 
 export async function POST(request) {
@@ -109,7 +95,7 @@ export async function POST(request) {
     const admin = getSupabaseAdmin();
     const token = getBearerToken(request);
     if (!token) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return apiError('AUTH_REQUIRED', 'Authentication required', { status: 401 });
     }
 
     const {
@@ -118,7 +104,7 @@ export async function POST(request) {
     } = await admin.auth.getUser(token);
 
     if (userError || !user) {
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+      return apiError('INVALID_SESSION', 'Invalid session', { status: 401 });
     }
 
     const { data: profile, error: profileError } = await admin
@@ -129,15 +115,18 @@ export async function POST(request) {
 
     if (profileError) throw profileError;
     if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+      return apiError('PROFILE_NOT_FOUND', 'Profile not found', { status: 404 });
     }
 
-    const body = await request.json();
-    const restaurantId = String(body.restaurant_id || '').trim();
-    const cartItems = Array.isArray(body.items) ? body.items : [];
-    if (!restaurantId || cartItems.length === 0) {
-      return NextResponse.json({ error: 'Restaurant and items are required.' }, { status: 400 });
-    }
+    const json = await readJsonBody(request);
+    if (!json.ok) return json.response;
+
+    const parsed = createOrderRequestSchema.safeParse(json.data);
+    if (!parsed.success) return validationError(parsed.error);
+
+    const body = parsed.data;
+    const restaurantId = body.restaurant_id;
+    const cartItems = body.items;
 
     const { data: restaurant, error: restaurantError } = await admin
       .from('restaurants')
@@ -147,16 +136,16 @@ export async function POST(request) {
 
     if (restaurantError) throw restaurantError;
     if (!restaurant || restaurant.status !== 'approved') {
-      return NextResponse.json({ error: 'This restaurant is not available.' }, { status: 400 });
+      return apiError('RESTAURANT_UNAVAILABLE', 'This restaurant is not available.', { status: 400 });
     }
     if (restaurant.is_open_manual === false) {
-      return NextResponse.json({ error: 'This restaurant is currently paused.' }, { status: 400 });
+      return apiError('RESTAURANT_PAUSED', 'This restaurant is currently paused.', { status: 400 });
     }
     if (!body.is_scheduled && !isRestaurantOpenNow(restaurant)) {
-      return NextResponse.json({ error: 'This restaurant is closed right now.' }, { status: 400 });
+      return apiError('RESTAURANT_CLOSED', 'This restaurant is closed right now.', { status: 400 });
     }
 
-    const menuItemIds = [...new Set(cartItems.map((item) => item.menu_item_id).filter(Boolean))];
+    const menuItemIds = [...new Set(cartItems.map((item) => item.menu_item_id))];
     const { data: menuItems, error: menuError } = await admin
       .from('menu_items')
       .select('*')
@@ -165,106 +154,76 @@ export async function POST(request) {
 
     if (menuError) throw menuError;
 
-    const items = buildOrderItems(cartItems, menuItems || []);
+    let items = [];
+    try {
+      items = buildOrderItems(cartItems, menuItems || []);
+    } catch (error) {
+      return apiError('INVALID_ORDER_ITEMS', error.message || 'Invalid order items.', { status: 400 });
+    }
+
     const subtotal = items.reduce((sum, item) => sum + asNumber(item.line_total), 0);
     if (restaurant.minimum_order && subtotal < restaurant.minimum_order) {
-      return NextResponse.json({ error: `Minimum order is ${restaurant.minimum_order} ETB.` }, { status: 400 });
+      return apiError('MINIMUM_ORDER_NOT_MET', `Minimum order is ${restaurant.minimum_order} ETB.`, { status: 400 });
     }
 
-    let promotion = null;
-    const promoCode = String(body.promo_code || '').trim().toUpperCase();
-    if (promoCode) {
-      const { data: promo, error: promoError } = await admin
-        .from('promotions')
-        .select('*')
-        .eq('code', promoCode)
-        .eq('is_active', true)
-        .maybeSingle();
-      if (promoError) throw promoError;
-      if (!promo) return NextResponse.json({ error: 'Invalid promo code.' }, { status: 400 });
-      if (promo.restaurant_id && promo.restaurant_id !== restaurantId) {
-        return NextResponse.json({ error: 'This promo is not valid for this restaurant.' }, { status: 400 });
-      }
-      promotion = promo;
-    }
-
-    const paymentMethod = ['cash', 'telebirr', 'card'].includes(body.payment_method) ? body.payment_method : 'cash';
-    const isScheduled = Boolean(body.is_scheduled);
+    const paymentMethod = body.payment_method;
+    const isScheduled = body.is_scheduled;
     const scheduledFor = isScheduled ? new Date(body.scheduled_for) : null;
     if (isScheduled) {
       if (!scheduledFor || Number.isNaN(scheduledFor.getTime())) {
-        return NextResponse.json({ error: 'A valid scheduled delivery time is required.' }, { status: 400 });
+        return apiError('INVALID_SCHEDULED_TIME', 'A valid scheduled delivery time is required.', { status: 400 });
       }
       const minimumLeadTime = Date.now() + 30 * 60 * 1000;
       if (scheduledFor.getTime() < minimumLeadTime) {
-        return NextResponse.json({ error: 'Scheduled orders must be at least 30 minutes from now.' }, { status: 400 });
+        return apiError('INVALID_SCHEDULED_TIME', 'Scheduled orders must be at least 30 minutes from now.', { status: 400 });
       }
     }
-    const priced = applyPromotion(promotion, subtotal, asNumber(restaurant.delivery_fee));
-    const total = Math.max(0, subtotal + priced.delivery_fee - priced.discount);
-    const now = new Date().toISOString();
 
     const orderPayload = {
-      order_number: generateOrderNumber(),
-      customer_email: user.email,
-      customer_name: profile.full_name || user.email,
-      customer_phone: String(body.customer_phone || profile.phone || '').trim(),
+      customer_phone: body.customer_phone,
       restaurant_id: restaurant.id,
       restaurant_name: restaurant.name,
       items,
       subtotal,
-      delivery_fee: priced.delivery_fee,
-      discount: priced.discount,
-      total,
-      promo_code: priced.promo_code,
+      delivery_fee: asNumber(restaurant.delivery_fee),
+      promo_code: body.promo_code || null,
       payment_method: paymentMethod,
-      payment_status: paymentMethod === 'cash' ? 'cash_on_delivery' : 'pending',
       delivery_lat: body.delivery_lat,
       delivery_lng: body.delivery_lng,
-      delivery_address_text: String(body.delivery_address_text || '').trim(),
-      delivery_notes: String(body.delivery_notes || '').slice(0, 500),
+      delivery_address_text: body.delivery_address_text,
+      delivery_notes: body.delivery_notes,
       is_scheduled: isScheduled,
       scheduled_for: isScheduled ? scheduledFor.toISOString() : null,
-      status: 'accepted',
-      accepted_at: now,
-      updated_date: now,
+      idempotency_key: body.idempotency_key || null,
     };
 
-    if (!orderPayload.customer_phone || !orderPayload.delivery_lat || !orderPayload.delivery_lng) {
-      return NextResponse.json({ error: 'Phone and delivery location are required.' }, { status: 400 });
+    if (
+      !orderPayload.customer_phone
+      || orderPayload.delivery_lat === null
+      || orderPayload.delivery_lat === undefined
+      || orderPayload.delivery_lng === null
+      || orderPayload.delivery_lng === undefined
+    ) {
+      return apiError('DELIVERY_DETAILS_REQUIRED', 'Phone and delivery location are required.', { status: 400 });
     }
 
-    const { data: order, error: orderError } = await admin
-      .from('orders')
-      .insert(orderPayload)
-      .select()
-      .single();
+    const { data: order, error: orderError } = await admin.rpc('create_order_atomic', {
+      p_customer_id: user.id,
+      p_customer_email: user.email,
+      p_customer_name: profile.full_name || user.email,
+      p_actor_role: profile.role || 'customer',
+      p_order: orderPayload,
+    });
 
-    if (orderError) throw orderError;
-
-    if (promotion) {
-      await admin
-        .from('promotions')
-        .update({ times_used: asNumber(promotion.times_used) + 1, updated_date: now })
-        .eq('id', promotion.id);
+    if (orderError) {
+      const mappedResponse = mapCreateOrderRpcError(orderError);
+      if (mappedResponse) return mappedResponse;
+      throw orderError;
     }
-
-    await admin
-      .from('profiles')
-      .update({
-        phone: orderPayload.customer_phone,
-        default_lat: orderPayload.delivery_lat,
-        default_lng: orderPayload.delivery_lng,
-        default_address_text: orderPayload.delivery_address_text,
-        updated_date: now,
-      })
-      .eq('id', user.id);
-
-    writeOrderEvent(admin, order.id, { email: user.email, role: profile.role }, 'created_auto_accepted', null, 'accepted', 'Order created and accepted automatically').catch(() => {});
 
     return NextResponse.json({ order });
   } catch (error) {
     console.error('Order creation failed:', error);
-    return NextResponse.json({ error: error.message || 'Failed to place order' }, { status: 500 });
+    return apiError('ORDER_CREATE_FAILED', 'Failed to place order', { status: 500 });
   }
 }

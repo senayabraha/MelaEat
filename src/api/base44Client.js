@@ -97,6 +97,12 @@ const getSessionAccessToken = async () => {
   return refreshedSession.access_token;
 };
 
+const getApiErrorMessage = (payload, fallback) => {
+  if (typeof payload?.message === 'string') return payload.message;
+  if (typeof payload?.error === 'string') return payload.error;
+  if (typeof payload?.error?.message === 'string') return payload.error.message;
+  return fallback;
+};
 
 const authFetch = async (url, options = {}) => {
   const requestWithToken = async (accessToken) =>
@@ -255,7 +261,7 @@ export const base44 = {
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({ error: 'Failed to complete role' }));
-        throw new Error(payload.error || 'Failed to complete role');
+        throw new Error(getApiErrorMessage(payload, 'Failed to complete role'));
       }
 
       const { profile } = await response.json();
@@ -275,7 +281,7 @@ export const base44 = {
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({ error: 'Failed to set up restaurant' }));
-        throw new Error(payload.error || 'Failed to set up restaurant');
+        throw new Error(getApiErrorMessage(payload, 'Failed to set up restaurant'));
       }
 
       return response.json();
@@ -294,7 +300,7 @@ export const base44 = {
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: 'Failed to place order' }));
-        throw new Error(result.error || 'Failed to place order');
+        throw new Error(getApiErrorMessage(result, 'Failed to place order'));
       }
 
       return response.json();
@@ -313,7 +319,7 @@ export const base44 = {
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: 'Failed to update order' }));
-        throw new Error(result.error || 'Failed to update order');
+        throw new Error(getApiErrorMessage(result, 'Failed to update order'));
       }
 
       return response.json();
@@ -332,7 +338,7 @@ export const base44 = {
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({ error: 'Failed to save rating' }));
-        throw new Error(result.error || 'Failed to save rating');
+        throw new Error(getApiErrorMessage(result, 'Failed to save rating'));
       }
 
       return response.json();

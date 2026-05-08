@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase/admin';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const getBearerToken = (request) => {
   const authHeader = request.headers.get('authorization') || '';
@@ -24,20 +20,12 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Restaurant name is required' }, { status: 400 });
     }
 
-    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
     const {
       data: { user },
-      error: authError,
-    } = await authClient.auth.getUser(token);
+      error: userError,
+    } = await admin.auth.getUser(token);
 
-    if (authError || !user) {
+    if (userError || !user) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 

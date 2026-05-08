@@ -1,18 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import { normalizeSupabaseUrl } from '@/lib/supabase/url';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const storageBucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || 'restaurant-assets';
-
-const normalizeSupabaseUrl = (url) => {
-  if (!url) return '';
-
-  try {
-    return new URL(url).origin;
-  } catch {
-    return '';
-  }
-};
 
 const normalizedSupabaseUrl = normalizeSupabaseUrl(supabaseUrl);
 export const isSupabaseConfigured = Boolean(normalizedSupabaseUrl && supabaseAnonKey);

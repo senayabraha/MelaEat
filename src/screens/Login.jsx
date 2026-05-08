@@ -108,7 +108,7 @@ export default function Login() {
       if (mode === 'reset') {
         const origin = window.location.origin;
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${origin}/reset-password/${selectedRole}`,
+          redirectTo: `${origin}/reset-password?role=${selectedRole}`,
         });
 
         if (resetError) throw resetError;

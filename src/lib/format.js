@@ -66,3 +66,14 @@ export function statusColor(status) {
   };
   return map[status] || 'bg-muted text-muted-foreground border-border';
 }
+
+export function paymentStatusLabel(status) {
+  const map = {
+    pending: 'Pending',
+    cash_on_delivery: 'Cash on delivery',
+    paid: 'Paid',
+    failed: 'Failed',
+    refunded: 'Refunded',
+  };
+  return map[status] || status;
+}

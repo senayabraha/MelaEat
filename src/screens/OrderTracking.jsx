@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Textarea } from '@/components/ui/textarea';
 import OrderStatusTimeline from '@/components/orders/OrderStatusTimeline';
 import OrderChat from '@/components/orders/OrderChat';
-import { formatETB, statusLabel, statusColor } from '@/lib/format';
+import { formatETB, statusLabel, statusColor, paymentStatusLabel } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function OrderTracking() {
@@ -141,7 +141,7 @@ export default function OrderTracking() {
             </div>
             <div className="border-t border-border mt-4 pt-4 text-xs text-muted-foreground space-y-1">
               <p className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" /> {order.delivery_address_text || 'Pin location'}</p>
-              <p>Payment: {order.payment_method}</p>
+              <p>Payment: {paymentStatusLabel(order.payment_status)}</p>
             </div>
           </section>
         </div>

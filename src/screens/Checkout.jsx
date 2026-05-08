@@ -110,45 +110,55 @@ export default function Checkout() {
       return;
     }
     setSubmitting(true);
-    const order = {
-      order_number: generateOrderNumber(),
-      customer_email: user.email,
-      customer_name: user.full_name,
-      customer_phone: phone,
-      restaurant_id: cart.restaurant_id,
-      restaurant_name: cart.restaurant_name,
-      items: cart.items.map((it) => ({
-        menu_item_id: it.menu_item_id,
-        name: it.name,
-        quantity: it.quantity,
-        unit_price: it.unit_price,
-        selected_options: it.selected_options,
-        line_total: it.line_total,
-        notes: it.notes,
-      })),
-      subtotal,
-      delivery_fee: freeDelivery ? 0 : deliveryFee,
-      discount,
-      total,
-      promo_code: appliedPromo?.code,
-      payment_method: paymentMethod,
-      payment_status: paymentMethod === 'cash' ? 'pending' : 'paid',
-      delivery_lat: lat,
-      delivery_lng: lng,
-      delivery_address_text: addressText,
-      delivery_notes: notes,
-      is_scheduled: deliveryMode === 'schedule',
-      scheduled_for: deliveryMode === 'schedule' ? new Date(scheduledTime).toISOString() : null,
-      status: 'pending',
-    };
-    const created = await base44.entities.Order.create(order);
-    if (appliedPromo) {
-      base44.entities.Promotion.update(appliedPromo.id, { times_used: (appliedPromo.times_used || 0) + 1 }).catch(() => {});
+    try {
+      const order = {
+        order_number: generateOrderNumber(),
+        customer_email: user.email,
+        customer_name: user.full_name,
+        customer_phone: phone,
+        restaurant_id: cart.restaurant_id,
+        restaurant_name: cart.restaurant_name,
+        items: cart.items.map((it) => ({
+          menu_item_id: it.menu_item_id,
+          name: it.name,
+          quantity: it.quantity,
+          unit_price: it.unit_price,
+          selected_options: it.selected_options,
+          line_total: it.line_total,
+          notes: it.notes,
+        })),
+        subtotal,
+        delivery_fee: freeDelivery ? 0 : deliveryFee,
+        discount,
+        total,
+        promo_code: appliedPromo?.code,
+        payment_method: paymentMethod,
+        payment_status: paymentMethod === 'cash' ? 'cash_on_delivery' : 'paid',
+        delivery_lat: lat,
+        delivery_lng: lng,
+        delivery_address_text: addressText,
+        delivery_notes: notes,
+        is_scheduled: deliveryMode === 'schedule',
+        scheduled_for: deliveryMode === 'schedule' ? new Date(scheduledTime).toISOString() : null,
+        status: 'accepted',
+        accepted_at: new Date().toISOString(),
+      };
+      const created = await base44.entities.Order.create(order);
+      if (appliedPromo) {
+        base44.entities.Promotion.update(appliedPromo.id, { times_used: (appliedPromo.times_used || 0) + 1 }).catch(() => {});
+      }
+      await base44.auth.updateMe({ phone, default_lat: lat, default_lng: lng, default_address_text: addressText });
+      clear();
+      navigate(`/order/${created.id}`);
+    } catch (error) {
+      toast({
+        title: 'Could not place order',
+        description: error.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
     }
-    await base44.auth.updateMe({ phone, default_lat: lat, default_lng: lng, default_address_text: addressText });
-    clear();
-    setSubmitting(false);
-    navigate(`/order/${created.id}`);
   };
 
   const minScheduled = new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16);

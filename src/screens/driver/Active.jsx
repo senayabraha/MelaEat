@@ -11,11 +11,12 @@ import { useToast } from '@/components/ui/use-toast';
 import OrderChat from '@/components/orders/OrderChat';
 
 export default function DriverActive() {
-  const { user } = useOutletContext();
+  const { user, refreshUser } = useOutletContext();
   const qc = useQueryClient();
   const { toast } = useToast();
   const [issueOrder, setIssueOrder] = React.useState(null);
   const [issueDescription, setIssueDescription] = React.useState('');
+  const approved = !user.driver_approval_status || user.driver_approval_status === 'approved';
 
   // Available orders (ready, no driver yet)
   const { data: available = [] } = useQuery({
@@ -25,7 +26,7 @@ export default function DriverActive() {
       return all.filter(o => !o.driver_email);
     },
     refetchInterval: 8000,
-    enabled: user.driver_status === 'online',
+    enabled: approved && user.driver_status === 'online',
   });
 
   // Active orders for this driver
@@ -44,14 +45,32 @@ export default function DriverActive() {
   };
 
   const accept = async (o) => {
-    await base44.orders.action(o.id, { action: 'driver_accept' });
-    toast({ title: 'Delivery accepted' });
-    refresh();
+    try {
+      await base44.orders.action(o.id, { action: 'driver_accept' });
+      toast({ title: 'Delivery accepted' });
+      await refreshUser();
+      refresh();
+    } catch (error) {
+      toast({
+        title: 'Could not accept delivery',
+        description: error.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const updateStatus = async (o, status) => {
-    await base44.orders.action(o.id, { action: status });
-    refresh();
+    try {
+      await base44.orders.action(o.id, { action: status });
+      await refreshUser();
+      refresh();
+    } catch (error) {
+      toast({
+        title: 'Could not update delivery',
+        description: error.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const reportIssue = async (o) => {
@@ -61,15 +80,23 @@ export default function DriverActive() {
 
   const submitIssue = async () => {
     if (!issueDescription.trim() || !issueOrder) return;
-    await base44.entities.IssueReport.create({
-      order_id: issueOrder.id,
-      reporter_email: user.email,
-      reporter_role: 'driver',
-      category: 'other',
-      description: issueDescription.trim(),
-    });
-    setIssueOrder(null);
-    toast({ title: 'Issue reported' });
+    try {
+      await base44.entities.IssueReport.create({
+        order_id: issueOrder.id,
+        reporter_email: user.email,
+        reporter_role: 'driver',
+        category: 'other',
+        description: issueDescription.trim(),
+      });
+      setIssueOrder(null);
+      toast({ title: 'Issue reported' });
+    } catch (error) {
+      toast({
+        title: 'Could not report issue',
+        description: error.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -83,7 +110,11 @@ export default function DriverActive() {
       )}
 
       <h2 className="font-display text-2xl font-semibold mb-4">Available pickups</h2>
-      {user.driver_status !== 'online' && user.driver_status !== 'on_delivery' ? (
+      {!approved ? (
+        <div className="bg-card border border-border rounded-2xl p-8 text-center">
+          <p className="text-muted-foreground">Your driver account must be approved before pickups appear.</p>
+        </div>
+      ) : user.driver_status !== 'online' && user.driver_status !== 'on_delivery' ? (
         <div className="bg-card border border-border rounded-2xl p-8 text-center">
           <p className="text-muted-foreground">Go online to see available deliveries.</p>
         </div>
@@ -133,7 +164,12 @@ function ActiveCard({ order, onUpdateStatus, onReportIssue }) {
   const next = (() => {
     if (order.status === 'ready_for_pickup') return { label: 'Picked up', value: 'picked_up' };
     if (order.status === 'picked_up') return { label: "I'm on the way", value: 'on_the_way' };
-    if (order.status === 'on_the_way') return { label: 'Delivered', value: 'delivered' };
+    if (order.status === 'on_the_way') {
+      return {
+        label: order.payment_method === 'cash' ? 'Collect cash & deliver' : 'Delivered',
+        value: 'delivered',
+      };
+    }
     return null;
   })();
 
@@ -157,6 +193,13 @@ function ActiveCard({ order, onUpdateStatus, onReportIssue }) {
         <Button variant="outline" size="icon" onClick={() => window.open(`tel:${order.customer_phone}`)}><Phone className="w-4 h-4" /></Button>
         <Button variant="outline" size="icon" onClick={() => onReportIssue(order)}><AlertTriangle className="w-4 h-4" /></Button>
       </div>
+      {order.payment_method === 'cash' && order.status === 'on_the_way' && (
+        <div className="px-4 pb-4">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Collect {formatETB(order.total || 0)} cash from the customer before marking delivered.
+          </div>
+        </div>
+      )}
       <div className="p-4 border-t border-border">
         <OrderChat orderId={order.id} currentRole="driver" recipientRole="customer" />
       </div>

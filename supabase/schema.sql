@@ -149,14 +149,14 @@ create table if not exists public.orders (
   total numeric not null default 0,
   promo_code text,
   payment_method text not null default 'cash' check (payment_method in ('cash', 'telebirr', 'card')),
-  payment_status text not null default 'pending' check (payment_status in ('pending', 'paid', 'failed', 'refunded')),
+  payment_status text not null default 'cash_on_delivery' check (payment_status in ('pending', 'cash_on_delivery', 'paid', 'failed', 'refunded')),
   delivery_lat numeric,
   delivery_lng numeric,
   delivery_address_text text,
   delivery_notes text,
   scheduled_for timestamptz,
   is_scheduled boolean not null default false,
-  status text not null default 'pending' check (status in ('pending', 'accepted', 'rejected', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way', 'delivered', 'cancelled')),
+  status text not null default 'accepted' check (status in ('pending', 'accepted', 'rejected', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way', 'delivered', 'cancelled')),
   rejection_reason text,
   estimated_ready_at timestamptz,
   accepted_at timestamptz,
@@ -168,6 +168,70 @@ create table if not exists public.orders (
   created_date timestamptz not null default now(),
   updated_date timestamptz not null default now()
 );
+
+alter table public.orders
+alter column status set default 'accepted';
+
+alter table public.orders
+alter column payment_status set default 'cash_on_delivery';
+
+alter table public.orders
+drop constraint if exists orders_payment_status_check;
+
+alter table public.orders
+add constraint orders_payment_status_check
+check (payment_status in ('pending', 'cash_on_delivery', 'paid', 'failed', 'refunded'));
+
+update public.orders
+set payment_status = 'cash_on_delivery'
+where payment_method = 'cash'
+  and payment_status = 'pending'
+  and status <> 'delivered';
+
+update public.orders
+set payment_status = 'paid'
+where payment_method = 'cash'
+  and status = 'delivered';
+
+create or replace function public.auto_accept_customer_order()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.status is null or new.status = 'pending' then
+    new.status := 'accepted';
+  end if;
+
+  if new.status = 'accepted' and new.accepted_at is null then
+    new.accepted_at := now();
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists auto_accept_customer_order_trigger on public.orders;
+create trigger auto_accept_customer_order_trigger
+before insert on public.orders
+for each row execute function public.auto_accept_customer_order();
+
+create or replace function public.settle_cash_payment_on_delivery()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.status = 'delivered' and new.payment_method = 'cash' then
+    new.payment_status := 'paid';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists settle_cash_payment_on_delivery_trigger on public.orders;
+create trigger settle_cash_payment_on_delivery_trigger
+before insert or update on public.orders
+for each row execute function public.settle_cash_payment_on_delivery();
 
 create table if not exists public.promotions (
   id uuid primary key default gen_random_uuid(),

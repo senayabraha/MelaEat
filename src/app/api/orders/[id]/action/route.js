@@ -30,6 +30,15 @@ const isRestaurantManager = (user, profile, restaurant) =>
     && (restaurant.owner_email === user.email || restaurant.id === profile?.restaurant_id)
   );
 
+const settleCashPaymentOnDelivery = (order, patch) => {
+  if (order.payment_method !== 'cash') return patch;
+
+  return {
+    ...patch,
+    payment_status: 'paid',
+  };
+};
+
 export async function POST(request, { params }) {
   try {
     const admin = getSupabaseAdmin();
@@ -156,7 +165,10 @@ export async function POST(request, { params }) {
 
       patch = { status: action };
       if (action === 'picked_up') patch.picked_up_at = new Date().toISOString();
-      if (action === 'delivered') patch.delivered_at = new Date().toISOString();
+      if (action === 'delivered') {
+        patch.delivered_at = new Date().toISOString();
+        patch = settleCashPaymentOnDelivery(order, patch);
+      }
     } else {
       return NextResponse.json({ error: 'Unsupported order action.' }, { status: 400 });
     }

@@ -106,11 +106,12 @@
       "type": "string",
       "enum": [
         "pending",
+        "cash_on_delivery",
         "paid",
         "failed",
         "refunded"
       ],
-      "default": "pending"
+      "default": "cash_on_delivery"
     },
     "delivery_lat": {
       "type": "number"
@@ -146,7 +147,7 @@
         "delivered",
         "cancelled"
       ],
-      "default": "pending"
+      "default": "accepted"
     },
     "rejection_reason": {
       "type": "string"

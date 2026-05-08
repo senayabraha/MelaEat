@@ -41,9 +41,13 @@ export default function RestaurantOrders() {
   const refresh = () => qc.invalidateQueries({ queryKey: ['restaurant-orders-full'] });
 
   const accept = async (o) => {
-    await base44.orders.action(o.id, { action: 'accept' });
-    toast({ title: 'Order accepted' });
-    refresh();
+    try {
+      await base44.orders.action(o.id, { action: 'accept' });
+      toast({ title: 'Order accepted' });
+      refresh();
+    } catch (error) {
+      toast({ title: 'Could not accept order', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
   const reject = async (o) => {
     setRejectingOrder(o);
@@ -51,22 +55,34 @@ export default function RestaurantOrders() {
   };
   const confirmReject = async () => {
     if (!rejectingOrder) return;
-    await base44.orders.action(rejectingOrder.id, {
-      action: 'reject',
-      reason: rejectReason,
-    });
-    setRejectingOrder(null);
-    toast({ title: 'Order rejected' });
-    refresh();
+    try {
+      await base44.orders.action(rejectingOrder.id, {
+        action: 'reject',
+        reason: rejectReason,
+      });
+      setRejectingOrder(null);
+      toast({ title: 'Order rejected' });
+      refresh();
+    } catch (error) {
+      toast({ title: 'Could not reject order', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
   const advance = async (o, value) => {
-    await base44.orders.action(o.id, { action: value });
-    refresh();
+    try {
+      await base44.orders.action(o.id, { action: value });
+      refresh();
+    } catch (error) {
+      toast({ title: 'Could not update order', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
   const assign = async (o, driver) => {
-    await base44.orders.action(o.id, { action: 'assign_driver', driver_email: driver.email });
-    toast({ title: `Assigned to ${driver.full_name}` });
-    refresh();
+    try {
+      await base44.orders.action(o.id, { action: 'assign_driver', driver_email: driver.email });
+      toast({ title: `Assigned to ${driver.full_name}` });
+      refresh();
+    } catch (error) {
+      toast({ title: 'Could not assign driver', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
 
   if (!restaurant) return null;
@@ -81,7 +97,7 @@ export default function RestaurantOrders() {
     <div className="p-6 sm:p-8 max-w-6xl">
       <h1 className="font-display text-3xl font-semibold mb-6">Orders</h1>
 
-      <Tabs defaultValue="new">
+      <Tabs defaultValue="active">
         <TabsList>
           <TabsTrigger value="new">New ({buckets.new.length})</TabsTrigger>
           <TabsTrigger value="active">Active ({buckets.active.length})</TabsTrigger>

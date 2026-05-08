@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -30,6 +30,7 @@ export default function Checkout() {
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (itemCount === 0) navigate('/browse');
@@ -48,7 +49,7 @@ export default function Checkout() {
     });
   }, []);
 
-  const { data: restaurant } = useQuery({
+  const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ['restaurant', cart.restaurant_id],
     queryFn: () => base44.entities.Restaurant.get(cart.restaurant_id),
     enabled: !!cart.restaurant_id,
@@ -96,21 +97,28 @@ export default function Checkout() {
     toast({ title: 'Promo applied', description: promo.title || promo.code });
   };
 
+  const statusReason = useMemo(() => {
+    if (!restaurant || restaurantLoading) return null;
+    if (restaurant.status === 'suspended') return 'This restaurant is temporarily suspended.';
+    if (restaurant.status === 'paused') return 'The restaurant has paused incoming orders.';
+    if (!isOpenNow(restaurant)) return 'The restaurant is currently outside operating hours.';
+    return null;
+  }, [restaurant]);
+
   const handlePlaceOrder = async () => {
     if (!user) {
       base44.auth.redirectToLogin(window.location.href);
       return;
     }
-    if (!phone || !lat || !lng) {
-      toast({ title: 'Please enter your phone and delivery location', variant: 'destructive' });
-      return;
-    }
-    if (deliveryMode === 'schedule' && !scheduledTime) {
-      toast({ title: 'Please pick a delivery time', variant: 'destructive' });
-      return;
-    }
-    if (!isOpenNow(restaurant)) {
-      toast({ title: 'This restaurant is not accepting orders right now', variant: 'destructive' });
+    const nextErrors = {};
+    if (!phone.trim()) nextErrors.phone = 'Phone number is required.';
+    if (!lat || !lng) nextErrors.location = 'Please place a delivery pin on the map.';
+    if (deliveryMode === 'schedule' && !scheduledTime) nextErrors.scheduledTime = 'Please pick a delivery date and time.';
+    if (!restaurantLoading && statusReason) nextErrors.restaurant = statusReason;
+
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      toast({ title: 'Please fix the highlighted fields', variant: 'destructive' });
       return;
     }
     setSubmitting(true);
@@ -150,10 +158,11 @@ export default function Checkout() {
   const minScheduled = new Date(Date.now() + 30 * 60 * 1000).toISOString().slice(0, 16);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <h1 className="font-display text-3xl font-semibold mb-8">Checkout</h1>
 
-      <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
         {/* Delivery timing */}
         <section className="bg-card border border-border rounded-2xl p-6">
           <h2 className="font-display text-xl font-semibold mb-4">When?</h2>
@@ -171,10 +180,14 @@ export default function Checkout() {
                 type="datetime-local"
                 min={minScheduled}
                 value={scheduledTime}
-                onChange={(e) => setScheduledTime(e.target.value)}
+                onChange={(e) => {
+                  setScheduledTime(e.target.value);
+                  setErrors((prev) => ({ ...prev, scheduledTime: undefined }));
+                }}
               />
             </TabsContent>
           </Tabs>
+          {errors.scheduledTime && <p className="text-sm text-destructive mt-2">{errors.scheduledTime}</p>}
         </section>
 
         {/* Contact + address */}
@@ -183,7 +196,8 @@ export default function Checkout() {
           <div className="space-y-4">
             <div>
               <Label className="mb-2 block">Phone number</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+251 ..." />
+              <Input value={phone} onChange={(e) => { setPhone(e.target.value); setErrors((prev) => ({ ...prev, phone: undefined })); }} placeholder="+251 ..." />
+              {errors.phone && <p className="text-sm text-destructive mt-2">{errors.phone}</p>}
             </div>
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -195,9 +209,14 @@ export default function Checkout() {
               <MapPicker
                 lat={lat}
                 lng={lng}
-                onChange={(la, ln) => { setLat(la); setLng(ln); }}
+                onChange={(la, ln) => {
+                  setLat(la);
+                  setLng(ln);
+                  setErrors((prev) => ({ ...prev, location: undefined }));
+                }}
               />
               <p className="text-xs text-muted-foreground mt-2">Tap the map to place your pin.</p>
+              {errors.location && <p className="text-sm text-destructive mt-2">{errors.location}</p>}
             </div>
             <div>
               <Label className="mb-2 block">Address details (building, landmark)</Label>
@@ -253,9 +272,12 @@ export default function Checkout() {
           )}
         </section>
 
+        </div>
+
         {/* Summary */}
-        <section className="bg-card border border-border rounded-2xl p-6">
+        <section className="bg-card border border-border rounded-2xl p-6 lg:sticky lg:top-24 h-fit">
           <h2 className="font-display text-xl font-semibold mb-4">Order summary</h2>
+          {errors.restaurant && <p className="text-sm text-destructive mb-3">{errors.restaurant}</p>}
           <div className="space-y-1.5 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatETB(subtotal)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Delivery fee</span><span>{freeDelivery ? <span className="text-success">Free</span> : formatETB(deliveryFee)}</span></div>

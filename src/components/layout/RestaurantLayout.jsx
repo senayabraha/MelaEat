@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ClipboardList, BookOpen, Tag, BarChart3, Settings, User, LogOut } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardMobileNav from './DashboardMobileNav';
+import { useAuth } from '@/lib/AuthContext';
 
 const ITEMS = [
   { to: '/restaurant', label: 'Overview', icon: LayoutDashboard, end: true },
@@ -16,18 +16,8 @@ const ITEMS = [
 ];
 
 export default function RestaurantLayout() {
-  const [user, setUser] = useState(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    base44.auth.me().then((u) => {
-      if (u.role !== 'restaurant' && u.role !== 'admin') {
-        navigate('/');
-        return;
-      }
-      setUser(u);
-    }).catch(() => base44.auth.redirectToLogin(window.location.href, 'restaurant'));
-  }, [navigate]);
+  const { user } = useAuth();
 
   if (!user) {
     return (

@@ -1,30 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingBag, MapPin, User, Menu, ClipboardList, Heart, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { base44 } from '@/api/base44Client';
 import Logo from './Logo';
 import { useCart } from '@/lib/cart';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function CustomerHeader() {
-  const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { itemCount } = useCart();
-
-  useEffect(() => {
-    base44.auth.isAuthenticated().then(async (a) => {
-      if (a) {
-        try {
-          const me = await base44.auth.me();
-          setUser(me);
-        } catch {}
-      }
-    });
-  }, []);
+  const { user, navigateToLogin } = useAuth();
 
   const navLinks = [
     { to: '/browse', label: 'Browse' },
@@ -131,7 +120,7 @@ export default function CustomerHeader() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button onClick={() => base44.auth.redirectToLogin(window.location.href)} size="sm" className="hidden sm:inline-flex">
+              <Button onClick={navigateToLogin} size="sm" className="hidden sm:inline-flex">
                 Sign in
               </Button>
             )}
@@ -155,7 +144,7 @@ export default function CustomerHeader() {
                     </Link>
                   ))}
                   {!user && (
-                    <Button onClick={() => base44.auth.redirectToLogin(window.location.href)} className="mt-4">
+                    <Button onClick={navigateToLogin} className="mt-4">
                       Sign in
                     </Button>
                   )}

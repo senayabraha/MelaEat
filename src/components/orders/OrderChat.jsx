@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { base44 } from '@/api/base44Client';
 import { timeAgo } from '@/lib/format';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function OrderChat({ orderId, currentRole, recipientRole }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const endRef = useRef(null);
 
   const load = async () => {
@@ -17,7 +18,6 @@ export default function OrderChat({ orderId, currentRole, recipientRole }) {
   };
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
     load();
     const unsub = base44.entities.ChatMessage.subscribe((evt) => {
       if (evt.data?.order_id === orderId) load();

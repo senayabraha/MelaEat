@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Award } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Profile() {
-  const [user, setUser] = useState(null);
+  const { user, checkUserAuth } = useAuth();
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [addressText, setAddressText] = useState('');
@@ -16,23 +17,22 @@ export default function Profile() {
   const { toast } = useToast();
 
   useEffect(() => {
-    base44.auth.me().then((currentUser) => {
-      setUser(currentUser);
-      setFullName(currentUser.full_name || '');
-      setPhone(currentUser.phone || '');
-      setAddressText(currentUser.default_address_text || '');
-    }).catch(() => base44.auth.redirectToLogin(window.location.href));
-  }, []);
+    if (!user) return;
+
+    setFullName(user.full_name || '');
+    setPhone(user.phone || '');
+    setAddressText(user.default_address_text || '');
+  }, [user]);
 
   const save = async () => {
     setSaving(true);
     try {
-      const updated = await base44.auth.updateMe({
+      await base44.auth.updateMe({
         full_name: fullName.trim(),
         phone,
         default_address_text: addressText.trim(),
       });
-      setUser(updated);
+      await checkUserAuth();
       toast({ title: 'Profile updated' });
     } finally {
       setSaving(false);

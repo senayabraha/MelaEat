@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -7,16 +7,13 @@ import { ChevronRight, Repeat } from 'lucide-react';
 import { formatETB, statusLabel, statusColor, formatDate, paymentStatusLabel, paymentStatusColor } from '@/lib/format';
 import { useCart } from '@/lib/cart';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Orders() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { addItem, clear } = useCart();
   const { toast } = useToast();
-
-  useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => base44.auth.redirectToLogin(window.location.href));
-  }, []);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['my-orders', user?.email],

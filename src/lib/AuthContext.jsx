@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect, useRef } from 'react';
 import { base44, supabase } from '@/api/base44Client';
 
 const AuthContext = createContext();
@@ -9,40 +9,86 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [authError, setAuthError] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const authRunId = useRef(0);
 
-  useEffect(() => {
-    checkUserAuth();
-    const { data } = supabase.auth.onAuthStateChange(() => {
-      checkUserAuth();
-    });
-    return () => data.subscription.unsubscribe();
+  const clearAuthState = useCallback(() => {
+    base44.auth.clearCache();
+    setUser(null);
+    setIsAuthenticated(false);
+    setAuthError(null);
+    setAuthChecked(true);
+    setIsLoadingAuth(false);
   }, []);
 
-  const checkUserAuth = async () => {
+  const checkUserAuth = useCallback(async (sessionOverride) => {
+    const runId = ++authRunId.current;
     setIsLoadingAuth(true);
     setAuthError(null);
     try {
-      const isAuthed = await base44.auth.isAuthenticated();
-      if (!isAuthed) {
+      if (sessionOverride === null) {
+        if (runId === authRunId.current) clearAuthState();
+        return null;
+      }
+
+      const currentUser = sessionOverride
+        ? await base44.auth.fromSession(sessionOverride)
+        : await base44.auth.me();
+
+      if (runId !== authRunId.current) return currentUser;
+
+      if (!currentUser) {
         setUser(null);
         setIsAuthenticated(false);
         setAuthChecked(true);
-        return;
+        return null;
       }
-      const currentUser = await base44.auth.me();
+
       setUser(currentUser);
       setIsAuthenticated(true);
       setAuthChecked(true);
+      return currentUser;
     } catch (error) {
+      if (runId !== authRunId.current) return null;
       console.error('Supabase auth check failed:', error);
+      base44.auth.clearCache();
       setUser(null);
       setIsAuthenticated(false);
       setAuthError({ type: 'unknown', message: error.message || 'Failed to load user' });
       setAuthChecked(true);
+      return null;
     } finally {
-      setIsLoadingAuth(false);
+      if (runId === authRunId.current) setIsLoadingAuth(false);
     }
-  };
+  }, [clearAuthState]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!mounted) return;
+      if (error || !data.session) {
+        checkUserAuth(null);
+        return;
+      }
+      checkUserAuth(data.session);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+
+      if (event === 'SIGNED_OUT' || !session) {
+        checkUserAuth(null);
+        return;
+      }
+
+      checkUserAuth(session);
+    });
+
+    return () => {
+      mounted = false;
+      data.subscription.unsubscribe();
+    };
+  }, [checkUserAuth]);
 
   const logout = () => base44.auth.logout();
   const navigateToLogin = () => base44.auth.redirectToLogin(window.location.href);

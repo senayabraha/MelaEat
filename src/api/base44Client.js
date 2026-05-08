@@ -18,6 +18,20 @@ if (supabaseUrl && normalizedSupabaseUrl && supabaseUrl !== normalizedSupabaseUr
 
 export const supabase = createClient(normalizedSupabaseUrl || 'https://example.supabase.co', supabaseAnonKey || 'missing-key');
 
+export const authNetworkMetrics = {
+  sessionReads: 0,
+  userReads: 0,
+  profileReads: 0,
+  refreshes: 0,
+  coalescedUserReads: 0,
+  coalescedTokenReads: 0,
+};
+
+let currentUserCache = null;
+let currentUserPromise = null;
+let currentUserPromiseId = null;
+let accessTokenPromise = null;
+
 const tables = {
   User: 'profiles',
   Restaurant: 'restaurants',
@@ -38,7 +52,16 @@ const mapAuthUser = (authUser, profile = {}) => ({
   ...profile,
 });
 
+const clearAuthCache = () => {
+  currentUserCache = null;
+  currentUserPromise = null;
+  currentUserPromiseId = null;
+  accessTokenPromise = null;
+};
+
 const ensureProfile = async (authUser) => {
+  authNetworkMetrics.profileReads += 1;
+
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('*')
@@ -64,14 +87,41 @@ const ensureProfile = async (authUser) => {
   return mapAuthUser(authUser, data);
 };
 
-const getCurrentUser = async () => {
-  const { data, error } = await supabase.auth.getUser();
-  if (error) throw error;
-  if (!data.user) throw new Error('Authentication required');
-  return ensureProfile(data.user);
+const getMappedUser = async (authUser) => {
+  if (!authUser) throw new Error('Authentication required');
+  if (currentUserCache?.id === authUser.id) return currentUserCache;
+
+  if (currentUserPromise && currentUserPromiseId === authUser.id) {
+    authNetworkMetrics.coalescedUserReads += 1;
+    return currentUserPromise;
+  }
+
+  currentUserPromiseId = authUser.id;
+  currentUserPromise = ensureProfile(authUser)
+    .then((mappedUser) => {
+      currentUserCache = mappedUser;
+      return mappedUser;
+    })
+    .finally(() => {
+      currentUserPromise = null;
+      currentUserPromiseId = null;
+    });
+
+  return currentUserPromise;
 };
 
-const getSessionAccessToken = async () => {
+const getCurrentUser = async (authUser) => {
+  if (authUser) return getMappedUser(authUser);
+
+  authNetworkMetrics.userReads += 1;
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  return getMappedUser(data.user);
+};
+
+const loadSessionAccessToken = async () => {
+  authNetworkMetrics.sessionReads += 1;
+
   const {
     data: { session },
     error: sessionError,
@@ -87,6 +137,7 @@ const getSessionAccessToken = async () => {
     data: { session: refreshedSession },
     error: refreshError,
   } = await supabase.auth.refreshSession();
+  authNetworkMetrics.refreshes += 1;
 
   if (refreshError) throw refreshError;
 
@@ -95,6 +146,20 @@ const getSessionAccessToken = async () => {
   }
 
   return refreshedSession.access_token;
+};
+
+const getSessionAccessToken = async () => {
+  if (accessTokenPromise) {
+    authNetworkMetrics.coalescedTokenReads += 1;
+    return accessTokenPromise;
+  }
+
+  accessTokenPromise = loadSessionAccessToken()
+    .finally(() => {
+      accessTokenPromise = null;
+    });
+
+  return accessTokenPromise;
 };
 
 const getApiErrorMessage = (payload, fallback) => {
@@ -125,6 +190,7 @@ const authFetch = async (url, options = {}) => {
     data: { session: refreshedSession },
     error: refreshError,
   } = await supabase.auth.refreshSession();
+  authNetworkMetrics.refreshes += 1;
 
   if (refreshError || !refreshedSession?.access_token) {
     return response;
@@ -216,11 +282,22 @@ const entity = (name) => {
 export const base44 = {
   auth: {
     async isAuthenticated() {
+      authNetworkMetrics.sessionReads += 1;
       const { data } = await supabase.auth.getSession();
       return !!data.session;
     },
 
     me: getCurrentUser,
+
+    fromSession(session) {
+      return getCurrentUser(session?.user);
+    },
+
+    clearCache: clearAuthCache,
+
+    getNetworkMetrics() {
+      return { ...authNetworkMetrics };
+    },
 
     async updateMe(patch) {
       const user = await getCurrentUser();
@@ -231,7 +308,8 @@ export const base44 = {
         .select()
         .single();
       if (error) throw error;
-      return { ...user, ...data };
+      currentUserCache = { ...user, ...data };
+      return currentUserCache;
     },
 
     redirectToLogin(returnTo = window.location.href, role = 'customer') {
@@ -243,18 +321,17 @@ export const base44 = {
     async logout(role = 'customer') {
       const loginRole = ['customer', 'restaurant', 'driver', 'admin'].includes(role) ? role : 'customer';
       await supabase.auth.signOut();
+      clearAuthCache();
       window.location.href = `/login/${loginRole}`;
     },
   },
 
   users: {
     async completeRole(role) {
-      const accessToken = await getSessionAccessToken();
-      const response = await fetch('/api/profile/complete-role', {
+      const response = await authFetch('/api/profile/complete-role', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ role }),
       });
@@ -269,12 +346,10 @@ export const base44 = {
     },
 
     async setupRestaurant({ name }) {
-      const accessToken = await getSessionAccessToken();
-      const response = await fetch('/api/restaurant/setup', {
+      const response = await authFetch('/api/restaurant/setup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ name }),
       });
@@ -307,12 +382,10 @@ export const base44 = {
     },
 
     async action(orderId, payload) {
-      const accessToken = await getSessionAccessToken();
-      const response = await fetch(`/api/orders/${orderId}/action`, {
+      const response = await authFetch(`/api/orders/${orderId}/action`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -326,12 +399,10 @@ export const base44 = {
     },
 
     async submitRating(orderId, payload) {
-      const accessToken = await getSessionAccessToken();
-      const response = await fetch(`/api/orders/${orderId}/rate`, {
+      const response = await authFetch(`/api/orders/${orderId}/rate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(payload),
       });

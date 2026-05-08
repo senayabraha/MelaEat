@@ -1,16 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import RestaurantCard from '@/components/customer/RestaurantCard';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Favorites() {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => base44.auth.redirectToLogin(window.location.href));
-  }, []);
+  const { user } = useAuth();
 
   const ids = user?.favorite_restaurant_ids || [];
 

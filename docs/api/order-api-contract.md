@@ -53,3 +53,5 @@ Promo codes are checked and redeemed inside the database transaction. Possible p
 - `{ "action": "picked_up" }`
 - `{ "action": "on_the_way" }`
 - `{ "action": "delivered" }`
+
+The route delegates transition enforcement to `apply_order_action(...)`. Clients keep the same action names, but invalid status moves, stale driver assignment races, and unauthorized actors are rejected by the database.

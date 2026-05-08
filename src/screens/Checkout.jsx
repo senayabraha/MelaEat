@@ -13,6 +13,7 @@ import { formatETB, isOpenNow } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
 import MapPicker from '@/components/customer/MapPicker';
 import { MapPin, Loader2 } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
 
 const hasCoordinate = (value) => value !== null && value !== undefined && Number.isFinite(Number(value));
 
@@ -30,7 +31,7 @@ export default function Checkout() {
   const { cart, subtotal, clear, itemCount } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [user, setUser] = useState(null);
+  const { user, navigateToLogin } = useAuth();
   const [phone, setPhone] = useState('');
   const [addressText, setAddressText] = useState('');
   const [lat, setLat] = useState(null);
@@ -51,18 +52,14 @@ export default function Checkout() {
   }, [itemCount, navigate]);
 
   useEffect(() => {
-    base44.auth.isAuthenticated().then(async (a) => {
-      if (a) {
-        const me = await base44.auth.me();
-        setUser(me);
-        setPhone(me.phone || '');
-        if (hasCoordinate(me.default_lat)) setLat(Number(me.default_lat));
-        if (hasCoordinate(me.default_lng)) setLng(Number(me.default_lng));
-        if (me.default_address_text) setAddressText(me.default_address_text);
-        setSavedAddresses(Array.isArray(me.saved_addresses) ? me.saved_addresses : []);
-      }
-    });
-  }, []);
+    if (!user) return;
+
+    setPhone(user.phone || '');
+    if (hasCoordinate(user.default_lat)) setLat(Number(user.default_lat));
+    if (hasCoordinate(user.default_lng)) setLng(Number(user.default_lng));
+    if (user.default_address_text) setAddressText(user.default_address_text);
+    setSavedAddresses(Array.isArray(user.saved_addresses) ? user.saved_addresses : []);
+  }, [user]);
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ['restaurant', cart.restaurant_id],
@@ -123,7 +120,7 @@ export default function Checkout() {
 
   const handlePlaceOrder = async () => {
     if (!user) {
-      base44.auth.redirectToLogin(window.location.href);
+      navigateToLogin();
       return;
     }
     const nextErrors = {};

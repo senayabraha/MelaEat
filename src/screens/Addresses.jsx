@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Trash2 } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Addresses() {
-  const [user, setUser] = useState(null);
+  const { user, checkUserAuth } = useAuth();
   const [form, setForm] = useState({
     default_address_text: '',
     default_lat: '',
@@ -19,18 +20,15 @@ export default function Addresses() {
   const { toast } = useToast();
 
   useEffect(() => {
-    base44.auth.me()
-      .then((currentUser) => {
-        setUser(currentUser);
-        setForm({
-          default_address_text: currentUser.default_address_text || '',
-          default_lat: currentUser.default_lat ?? '',
-          default_lng: currentUser.default_lng ?? '',
-        });
-        setSavedAddresses(Array.isArray(currentUser.saved_addresses) ? currentUser.saved_addresses : []);
-      })
-      .catch(() => base44.auth.redirectToLogin(window.location.href));
-  }, []);
+    if (!user) return;
+
+    setForm({
+      default_address_text: user.default_address_text || '',
+      default_lat: user.default_lat ?? '',
+      default_lng: user.default_lng ?? '',
+    });
+    setSavedAddresses(Array.isArray(user.saved_addresses) ? user.saved_addresses : []);
+  }, [user]);
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -46,6 +44,7 @@ export default function Addresses() {
         saved_addresses: savedAddresses,
       };
       await base44.auth.updateMe(payload);
+      await checkUserAuth();
       toast({ title: 'Delivery location updated' });
     } catch (error) {
       toast({ title: 'Could not save address', description: error.message || 'Please try again.', variant: 'destructive' });

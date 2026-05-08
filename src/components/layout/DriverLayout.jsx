@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Truck, History, Wallet, User, Settings, LogOut } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardMobileNav from './DashboardMobileNav';
+import { useAuth } from '@/lib/AuthContext';
 
 const ITEMS = [
   { to: '/driver', label: 'Today', icon: LayoutDashboard, end: true },
@@ -15,18 +15,8 @@ const ITEMS = [
 ];
 
 export default function DriverLayout() {
-  const [user, setUser] = useState(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    base44.auth.me().then((u) => {
-      if (u.role !== 'driver' && u.role !== 'admin') {
-        navigate('/');
-        return;
-      }
-      setUser(u);
-    }).catch(() => base44.auth.redirectToLogin(window.location.href, 'driver'));
-  }, [navigate]);
+  const { user, checkUserAuth } = useAuth();
 
   if (!user) {
     return (
@@ -40,7 +30,7 @@ export default function DriverLayout() {
     <div className="min-h-screen flex bg-background">
       <DashboardSidebar items={ITEMS} title="Driver" user={user} logoutRole="driver" />
       <main className="flex-1 min-w-0 pb-20 lg:pb-0">
-        <Outlet context={{ user, refreshUser: async () => setUser(await base44.auth.me()) }} />
+        <Outlet context={{ user, refreshUser: checkUserAuth }} />
       </main>
       <DashboardMobileNav items={[
         { to: '/driver', label: 'Today', icon: LayoutDashboard, end: true },

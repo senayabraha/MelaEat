@@ -26,6 +26,8 @@ It requires `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_URL` plus `SUPABASE_SERVICE_
 - Checkout accepts a UUID idempotency key for retry protection.
 - Promo redemption load test proves `usage_limit` cannot be exceeded under concurrent RPC calls.
 - RPC rollback test proves a later insert failure rolls back promo usage.
+- State-machine static test verifies all compatibility action names are present in the DB transition matrix.
+- RLS static test verifies direct order insert/update and audit-event insert policies are absent from the canonical schema.
 
 ## Next Integration Coverage
 

@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Store, Users, ClipboardList, LogOut } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardMobileNav from './DashboardMobileNav';
+import { useAuth } from '@/lib/AuthContext';
 
 const ITEMS = [
   { to: '/admin', label: 'Overview', icon: LayoutDashboard, end: true },
@@ -13,15 +13,8 @@ const ITEMS = [
 ];
 
 export default function AdminLayout() {
-  const [user, setUser] = useState(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    base44.auth.me().then((u) => {
-      if (u.role !== 'admin') { navigate('/'); return; }
-      setUser(u);
-    }).catch(() => base44.auth.redirectToLogin(window.location.href, 'admin'));
-  }, [navigate]);
+  const { user } = useAuth();
 
   if (!user) {
     return (

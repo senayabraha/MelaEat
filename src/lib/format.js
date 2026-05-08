@@ -86,6 +86,7 @@ export function paymentStatusLabel(status) {
     paid: 'Paid',
     failed: 'Failed',
     refunded: 'Refunded',
+    cancelled: 'Cancelled',
   };
   return map[status] || status;
 }
@@ -97,6 +98,7 @@ export function paymentStatusColor(status) {
     paid: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     failed: 'bg-red-100 text-red-800 border-red-200',
     refunded: 'bg-slate-100 text-slate-700 border-slate-200',
+    cancelled: 'bg-slate-100 text-slate-700 border-slate-200',
   };
   return map[status] || 'bg-muted text-muted-foreground border-border';
 }

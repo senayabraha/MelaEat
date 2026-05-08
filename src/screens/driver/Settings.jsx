@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ export default function DriverSettings() {
   const approved = !user.driver_approval_status || user.driver_approval_status === 'approved';
   const [online, setOnline] = useState(approved && user.driver_status !== 'offline');
   const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   const save = async () => {
@@ -50,7 +51,7 @@ export default function DriverSettings() {
 
         <div className="flex flex-wrap gap-3">
           <Button onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save settings'}</Button>
-          <Button variant="outline" onClick={() => base44.auth.logout()}>Sign out</Button>
+          <Button variant="outline" onClick={() => navigate('/logout/driver')}>Sign out</Button>
         </div>
       </div>
     </div>

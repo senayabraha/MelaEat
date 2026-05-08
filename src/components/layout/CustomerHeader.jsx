@@ -125,7 +125,7 @@ export default function CustomerHeader() {
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => base44.auth.logout()}>
+                  <DropdownMenuItem onClick={() => navigate(`/logout/${user.role || 'customer'}`)}>
                     <LogOut className="w-4 h-4 mr-2" /> Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>

@@ -27,7 +27,7 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      <DashboardSidebar items={ITEMS} title="Admin" user={user} />
+      <DashboardSidebar items={ITEMS} title="Admin" user={user} logoutRole="admin" />
       <main className="flex-1 min-w-0 pb-20 lg:pb-0">
         <Outlet context={{ user }} />
       </main>

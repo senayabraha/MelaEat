@@ -29,9 +29,14 @@ export default function Login() {
   const navigate = useNavigate();
   const requestedRole = params.get('role') || routeRole;
   const selectedRole = allowedRoles.has(requestedRole) ? requestedRole : 'customer';
-  const initialMode = selectedRole !== 'admin' && (
-    location.pathname.startsWith('/signup') || params.get('mode') === 'signup' || params.get('mode') === 'sign-up'
-  ) ? 'signup' : 'signin';
+  const isRecoveryCallback = location.hash.includes('type=recovery') || params.get('type') === 'recovery';
+  const initialMode = isRecoveryCallback
+    ? 'update-password'
+    : location.pathname.startsWith('/reset-password') || params.get('mode') === 'reset'
+      ? 'reset'
+      : selectedRole !== 'admin' && (
+        location.pathname.startsWith('/signup') || params.get('mode') === 'signup' || params.get('mode') === 'sign-up'
+      ) ? 'signup' : 'signin';
   const [mode, setMode] = useState(initialMode);
   const [fullName, setFullName] = useState('');
   const [restaurantName, setRestaurantName] = useState('');
@@ -43,6 +48,7 @@ export default function Login() {
   const [message, setMessage] = useState('');
   const hasRedirect = Boolean(params.get('redirect'));
   const isSignupAllowed = selectedRole !== 'admin';
+  const isPasswordMode = mode === 'signin' || mode === 'signup' || mode === 'update-password';
 
   const redirectTo = useMemo(() => {
     const target = params.get('redirect');
@@ -97,6 +103,35 @@ export default function Login() {
     try {
       if (!isSupabaseConfigured) {
         throw new Error('Supabase is not configured yet. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then restart the app.');
+      }
+
+      if (mode === 'reset') {
+        const origin = window.location.origin;
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${origin}/reset-password/${selectedRole}`,
+        });
+
+        if (resetError) throw resetError;
+        setMessage('Password reset email sent. Open the link in your email to choose a new password.');
+        return;
+      }
+
+      if (mode === 'update-password') {
+        if (password.length < 6) {
+          throw new Error('Password must be at least 6 characters long.');
+        }
+
+        if (password !== confirmPassword) {
+          throw new Error('Passwords do not match.');
+        }
+
+        const { error: updateError } = await supabase.auth.updateUser({ password });
+        if (updateError) throw updateError;
+        setMessage('Password updated. You can now sign in.');
+        setPassword('');
+        setConfirmPassword('');
+        setMode('signin');
+        return;
       }
 
       if (mode === 'signin') {
@@ -164,12 +199,22 @@ export default function Login() {
         </div>
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
           <h1 className="font-display text-2xl font-semibold mb-2">
-            {mode === 'signin' ? `${roleLabels[selectedRole]} sign in` : `Create your ${roleLabels[selectedRole]} account`}
+            {mode === 'signin'
+              ? `${roleLabels[selectedRole]} sign in`
+              : mode === 'reset'
+                ? `Reset your ${roleLabels[selectedRole]} password`
+                : mode === 'update-password'
+                  ? 'Choose a new password'
+                  : `Create your ${roleLabels[selectedRole]} account`}
           </h1>
           <p className="text-sm text-muted-foreground mb-6">
             {mode === 'signin'
               ? `Continue as a ${roleLabels[selectedRole]}.`
-              : `Create your ${roleLabels[selectedRole]} account.`}
+              : mode === 'reset'
+                ? 'Enter your email and we will send a secure recovery link.'
+                : mode === 'update-password'
+                  ? 'Enter a new password for your account.'
+                  : `Create your ${roleLabels[selectedRole]} account.`}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -204,20 +249,23 @@ export default function Login() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
-                required
+                required={mode !== 'update-password'}
+                disabled={mode === 'update-password'}
               />
             </div>
-            <div>
-              <Label className="mb-2 block">Password</Label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="At least 6 characters"
-                required
-              />
-            </div>
-            {mode === 'signup' && (
+            {isPasswordMode && (
+              <div>
+                <Label className="mb-2 block">{mode === 'update-password' ? 'New password' : 'Password'}</Label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="At least 6 characters"
+                  required
+                />
+              </div>
+            )}
+            {(mode === 'signup' || mode === 'update-password') && (
               <div>
                 <Label className="mb-2 block">Confirm password</Label>
                 <Input
@@ -235,14 +283,22 @@ export default function Login() {
               {loading
                 ? mode === 'signin'
                   ? 'Signing in...'
-                  : 'Creating account...'
+                  : mode === 'reset'
+                    ? 'Sending email...'
+                    : mode === 'update-password'
+                      ? 'Updating password...'
+                      : 'Creating account...'
                 : mode === 'signin'
                   ? 'Sign in'
-                  : 'Create account'}
+                  : mode === 'reset'
+                    ? 'Send reset email'
+                    : mode === 'update-password'
+                      ? 'Update password'
+                      : 'Create account'}
             </Button>
           </form>
 
-          {isSignupAllowed && (
+          {mode !== 'update-password' && isSignupAllowed && (
             <p className="mt-4 text-sm text-muted-foreground">
               {mode === 'signin' ? "Don't have an account yet?" : 'Already have an account?'}{' '}
               <button
@@ -256,6 +312,12 @@ export default function Login() {
               >
                 {mode === 'signin' ? 'Create one' : 'Sign in'}
               </button>
+            </p>
+          )}
+
+          {mode === 'signin' && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Forgot password? <Link className="text-primary hover:underline" to={`/reset-password/${selectedRole}`}>Reset it</Link>
             </p>
           )}
 

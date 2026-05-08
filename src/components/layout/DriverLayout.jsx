@@ -32,7 +32,7 @@ export default function DriverLayout() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      <DashboardSidebar items={ITEMS} title="Driver" user={user} />
+      <DashboardSidebar items={ITEMS} title="Driver" user={user} logoutRole="driver" />
       <main className="flex-1 min-w-0 pb-20 lg:pb-0">
         <Outlet context={{ user, refreshUser: async () => setUser(await base44.auth.me()) }} />
       </main>
@@ -41,7 +41,7 @@ export default function DriverLayout() {
         { to: '/driver/active', label: 'Active', icon: Truck },
         { to: '/driver/profile', label: 'Profile', icon: User },
         { to: '/driver/settings', label: 'Settings', icon: Settings },
-        { label: 'Logout', icon: LogOut, action: () => base44.auth.logout() },
+        { label: 'Logout', icon: LogOut, action: () => navigate('/logout/driver') },
       ]} />
     </div>
   );

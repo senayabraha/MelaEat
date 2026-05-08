@@ -33,7 +33,7 @@ export default function RestaurantLayout() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      <DashboardSidebar items={ITEMS} title="Restaurant" user={user} />
+      <DashboardSidebar items={ITEMS} title="Restaurant" user={user} logoutRole="restaurant" />
       <main className="flex-1 min-w-0 pb-20 lg:pb-0">
         <Outlet context={{ user }} />
       </main>
@@ -43,7 +43,7 @@ export default function RestaurantLayout() {
         { to: '/restaurant/menu', label: 'Menu', icon: BookOpen },
         { to: '/restaurant/profile', label: 'Profile', icon: User },
         { to: '/restaurant/settings', label: 'Settings', icon: Settings },
-        { label: 'Logout', icon: LogOut, action: () => base44.auth.logout() },
+        { label: 'Logout', icon: LogOut, action: () => navigate('/logout/restaurant') },
       ]} />
     </div>
   );

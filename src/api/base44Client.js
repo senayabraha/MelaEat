@@ -234,9 +234,10 @@ export const base44 = {
       window.location.href = `/login/${loginRole}?redirect=${redirect}`;
     },
 
-    async logout() {
+    async logout(role = 'customer') {
+      const loginRole = ['customer', 'restaurant', 'driver', 'admin'].includes(role) ? role : 'customer';
       await supabase.auth.signOut();
-      window.location.href = '/';
+      window.location.href = `/login/${loginRole}`;
     },
   },
 

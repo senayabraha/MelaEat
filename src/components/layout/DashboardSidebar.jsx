@@ -1,11 +1,12 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
 import Logo from './Logo';
 import { Button } from '@/components/ui/button';
 
-export default function DashboardSidebar({ items, title, user }) {
+export default function DashboardSidebar({ items, title, user, logoutRole = 'customer' }) {
+  const navigate = useNavigate();
+
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-border bg-card sticky top-0 h-screen">
       <div className="p-5 border-b border-border">
@@ -44,7 +45,7 @@ export default function DashboardSidebar({ items, title, user }) {
           variant="ghost"
           className="w-full justify-start text-muted-foreground"
           size="sm"
-          onClick={() => base44.auth.logout()}
+          onClick={() => navigate(`/logout/${logoutRole}`)}
         >
           <LogOut className="w-4 h-4 mr-2" /> Sign out
         </Button>

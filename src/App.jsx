@@ -22,6 +22,7 @@ import Favorites from '@/screens/Favorites';
 import Profile from '@/screens/Profile';
 import Addresses from '@/screens/Addresses';
 import Login from '@/screens/Login';
+import Logout from '@/screens/Logout';
 
 import RestaurantOverview from '@/screens/restaurant/Overview';
 import RestaurantOrders from '@/screens/restaurant/Orders';
@@ -108,6 +109,8 @@ const AuthenticatedApp = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/login/:role" element={<Login />} />
       <Route path="/signup/:role" element={<Login />} />
+      <Route path="/reset-password/:role" element={<Login />} />
+      <Route path="/logout/:role" element={<Logout />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

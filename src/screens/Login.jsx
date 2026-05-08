@@ -137,12 +137,7 @@ export default function Login() {
       if (signUpError) throw signUpError;
 
       if (data.session) {
-        if (selectedRole === 'restaurant') {
-          await base44.users.setupRestaurant({
-            name: restaurantName.trim() || fullName.trim() || 'New Restaurant',
-          });
-        }
-        navigate(roleDestinations[selectedRole], { replace: true });
+        await finishAuth();
         return;
       }
 

@@ -44,7 +44,7 @@ export default function RoleSelection() {
 
     try {
       const role = roles.find((entry) => entry.key === selected);
-      await base44.auth.updateMe({ role: role.key });
+      await base44.users.completeRole(role.key);
 
       if (role.key === 'restaurant') {
         await base44.users.setupRestaurant({

@@ -41,13 +41,29 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 
-    const { data: profile, error: profileError } = await admin
+    let { data: profile, error: profileError } = await admin
       .from('profiles')
-      .select('restaurant_id, full_name, role')
+      .select('id, restaurant_id, full_name, role')
       .eq('id', user.id)
       .maybeSingle();
 
     if (profileError) throw profileError;
+
+    if (!profile) {
+      const { data: createdProfile, error: createProfileError } = await admin
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Restaurant owner',
+          role: 'restaurant',
+        })
+        .select('id, restaurant_id, full_name, role')
+        .single();
+
+      if (createProfileError) throw createProfileError;
+      profile = createdProfile;
+    }
 
     if (profile?.role && !['user', 'restaurant'].includes(profile.role)) {
       return NextResponse.json({ error: 'Only restaurant accounts can set up a restaurant profile' }, { status: 403 });
@@ -91,18 +107,20 @@ export async function POST(request) {
       restaurant = data;
     }
 
-    const { error: updateProfileError } = await admin
+    const { data: updatedProfile, error: updateProfileError } = await admin
       .from('profiles')
       .update({
         role: 'restaurant',
         restaurant_id: restaurant.id,
         updated_date: new Date().toISOString(),
       })
-      .eq('id', user.id);
+      .eq('id', user.id)
+      .select()
+      .single();
 
     if (updateProfileError) throw updateProfileError;
 
-    return NextResponse.json({ restaurant });
+    return NextResponse.json({ restaurant, profile: updatedProfile });
   } catch (error) {
     console.error('Restaurant setup failed:', error);
     return NextResponse.json({ error: error.message || 'Failed to set up restaurant' }, { status: 500 });

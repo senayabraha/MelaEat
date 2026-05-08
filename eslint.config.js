@@ -3,8 +3,10 @@ import pluginJs from "@eslint/js";
 import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
 import pluginUnusedImports from "eslint-plugin-unused-imports";
+import nextVitals from "eslint-config-next/core-web-vitals";
 
 export default [
+  ...nextVitals,
   {
     files: [
       "src/components/**/*.{js,mjs,cjs,jsx}",

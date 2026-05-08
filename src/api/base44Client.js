@@ -83,13 +83,58 @@ const getCurrentUser = async () => {
 const getSessionAccessToken = async () => {
   const {
     data: { session },
+    error: sessionError,
   } = await supabase.auth.getSession();
 
-  if (!session?.access_token) {
+  if (sessionError) throw sessionError;
+
+  if (session?.access_token) {
+    return session.access_token;
+  }
+
+  const {
+    data: { session: refreshedSession },
+    error: refreshError,
+  } = await supabase.auth.refreshSession();
+
+  if (refreshError) throw refreshError;
+
+  if (!refreshedSession?.access_token) {
     throw new Error('Authentication required');
   }
 
-  return session.access_token;
+  return refreshedSession.access_token;
+};
+
+
+const authFetch = async (url, options = {}) => {
+  const requestWithToken = async (accessToken) =>
+    fetch(url, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+  const firstToken = await getSessionAccessToken();
+  let response = await requestWithToken(firstToken);
+
+  if (response.status !== 401) {
+    return response;
+  }
+
+  const {
+    data: { session: refreshedSession },
+    error: refreshError,
+  } = await supabase.auth.refreshSession();
+
+  if (refreshError || !refreshedSession?.access_token) {
+    return response;
+  }
+
+  response = await requestWithToken(refreshedSession.access_token);
+  return response;
 };
 
 const applySort = (query, sort) => {
@@ -247,12 +292,10 @@ export const base44 = {
 
   orders: {
     async create(payload) {
-      const accessToken = await getSessionAccessToken();
-      const response = await fetch('/api/orders', {
+      const response = await authFetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify(payload),
       });

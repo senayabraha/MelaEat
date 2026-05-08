@@ -164,6 +164,13 @@ export async function POST(request, { params }) {
         status: 'cancelled',
         rejection_reason: String(body.reason || 'Cancelled by customer').trim(),
       };
+      if (order.payment_status === 'paid' && order.payment_method !== 'cash') {
+        patch.payment_status = 'refunded';
+      } else if (order.payment_method === 'cash') {
+        patch.payment_status = 'cancelled';
+      } else if (order.payment_status === 'pending') {
+        patch.payment_status = 'failed';
+      }
     } else if (action === 'driver_accept') {
       if (profile.role !== 'driver') {
         return NextResponse.json({ error: 'Only drivers can accept deliveries.' }, { status: 403 });

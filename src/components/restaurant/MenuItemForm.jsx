@@ -28,6 +28,7 @@ export default function MenuItemForm({ open, onClose, onSave, item, categories, 
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       setForm({ ...form, image_url: file_url });
+      toast({ title: 'Image uploaded' });
     } catch (error) {
       toast({ title: 'Upload failed', description: error.message || 'Please try again.', variant: 'destructive' });
     } finally {
@@ -36,14 +37,20 @@ export default function MenuItemForm({ open, onClose, onSave, item, categories, 
   };
 
   const submit = async () => {
-    const payload = { ...form, price: Number(form.price) };
-    if (form.id) {
-      await base44.entities.MenuItem.update(form.id, payload);
-    } else {
-      await base44.entities.MenuItem.create(payload);
+    try {
+      const payload = { ...form, price: Number(form.price) };
+      if (form.id) {
+        await base44.entities.MenuItem.update(form.id, payload);
+        toast({ title: 'Menu item updated' });
+      } else {
+        await base44.entities.MenuItem.create(payload);
+        toast({ title: 'Menu item created' });
+      }
+      onSave();
+      onClose();
+    } catch (error) {
+      toast({ title: 'Could not save menu item', description: error.message || 'Please try again.', variant: 'destructive' });
     }
-    onSave();
-    onClose();
   };
 
   return (

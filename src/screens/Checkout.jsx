@@ -31,6 +31,7 @@ export default function Checkout() {
   const [appliedPromo, setAppliedPromo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [savedAddresses, setSavedAddresses] = useState([]);
 
   useEffect(() => {
     if (itemCount === 0) navigate('/browse');
@@ -45,6 +46,7 @@ export default function Checkout() {
         if (me.default_lat) setLat(me.default_lat);
         if (me.default_lng) setLng(me.default_lng);
         if (me.default_address_text) setAddressText(me.default_address_text);
+        setSavedAddresses(Array.isArray(me.saved_addresses) ? me.saved_addresses : []);
       }
     });
   }, []);
@@ -65,6 +67,7 @@ export default function Checkout() {
     : 0;
   const freeDelivery = appliedPromo?.discount_type === 'free_delivery';
   const total = Math.max(0, subtotal + (freeDelivery ? 0 : deliveryFee) - discount);
+  const belowMinimum = !!restaurant?.minimum_order && subtotal < restaurant.minimum_order;
 
   const useCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -115,6 +118,7 @@ export default function Checkout() {
     if (!lat || !lng) nextErrors.location = 'Please place a delivery pin on the map.';
     if (deliveryMode === 'schedule' && !scheduledTime) nextErrors.scheduledTime = 'Please pick a delivery date and time.';
     if (!restaurantLoading && statusReason) nextErrors.restaurant = statusReason;
+    if (!restaurantLoading && belowMinimum) nextErrors.minimumOrder = `Minimum order is ${formatETB(restaurant.minimum_order)}.`;
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
@@ -221,6 +225,19 @@ export default function Checkout() {
             <div>
               <Label className="mb-2 block">Address details (building, landmark)</Label>
               <Input value={addressText} onChange={(e) => setAddressText(e.target.value)} placeholder="e.g. Bole, near Edna Mall" />
+              {savedAddresses.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {savedAddresses.map((a, i) => (
+                    <Button key={`${a.address_text}-${i}`} type="button" size="sm" variant="outline" onClick={() => {
+                      setAddressText(a.address_text || '');
+                      if (a.lat) setLat(a.lat);
+                      if (a.lng) setLng(a.lng);
+                    }}>
+                      {a.label || `Address ${i + 1}`}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <Label className="mb-2 block">Delivery notes (optional)</Label>
@@ -284,15 +301,18 @@ export default function Checkout() {
             {discount > 0 && (
               <div className="flex justify-between text-success"><span>Discount</span><span>-{formatETB(discount)}</span></div>
             )}
-            <div className="border-t border-border my-3" />
-            <div className="flex justify-between font-semibold text-base"><span>Total</span><span>{formatETB(total)}</span></div>
+          <div className="border-t border-border my-3" />
+          {belowMinimum && (
+            <p className="text-sm text-destructive mb-2">Minimum order is {formatETB(restaurant.minimum_order)} before checkout.</p>
+          )}
+          <div className="flex justify-between font-semibold text-base"><span>Total</span><span>{formatETB(total)}</span></div>
           </div>
           <Button
             className="w-full h-12 rounded-full mt-5 text-base"
             onClick={handlePlaceOrder}
             disabled={submitting}
           >
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : `Place order · ${formatETB(total)}`}
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : `Place order  |  ${formatETB(total)}`}
           </Button>
         </section>
       </div>

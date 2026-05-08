@@ -130,7 +130,7 @@ export default function RestaurantSettings() {
           </div>
         </Section>
 
-        <Button onClick={save} disabled={saving} className="w-full sm:w-auto">{saving ? 'Saving…' : 'Save changes'}</Button>
+        <Button onClick={save} disabled={saving} className="w-full sm:w-auto">{saving ? 'Saving...' : 'Save changes'}</Button>
       </div>
     </div>
   );

@@ -54,7 +54,7 @@ export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAs
       <div className="p-5 space-y-1.5 text-sm">
         {order.items.map((it, i) => (
           <div key={i} className="flex justify-between">
-            <span><span className="font-medium">{it.quantity}×</span> {it.name}
+            <span><span className="font-medium">{it.quantity}x</span> {it.name}
               {(it.selected_options || []).length > 0 && (
                 <span className="text-muted-foreground text-xs block ml-5">{it.selected_options.map(o => o.choice_name).join(', ')}</span>
               )}
@@ -111,7 +111,7 @@ export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAs
             className="flex-1 px-3 py-2 rounded-md border border-border bg-card text-sm"
             defaultValue=""
           >
-            <option value="" disabled>Assign driver…</option>
+            <option value="" disabled>Assign driver...</option>
             {drivers.map(d => <option key={d.email} value={d.email}>{d.full_name}</option>)}
           </select>
         )}

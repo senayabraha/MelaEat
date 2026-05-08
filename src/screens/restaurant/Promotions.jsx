@@ -101,6 +101,15 @@ export default function RestaurantPromotions() {
           <Tag className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
           <p className="font-display text-xl mb-1">No promotions yet</p>
           <p className="text-muted-foreground text-sm">Create discount codes to attract more customers.</p>
+          <Button
+            className="mt-4"
+            onClick={() => {
+              setForm({ discount_type: 'percentage', discount_value: 10 });
+              setOpen(true);
+            }}
+          >
+            <Plus className="w-4 h-4 mr-1" /> Create first promo
+          </Button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -111,10 +120,10 @@ export default function RestaurantPromotions() {
                   <span className="font-mono font-semibold bg-secondary px-2 py-0.5 rounded">{p.code}</span>
                   {!p.is_active && <span className="text-xs text-muted-foreground">(inactive)</span>}
                 </div>
-                <p className="text-sm">{p.title || '—'}</p>
+                <p className="text-sm">{p.title || '-'}</p>
                 <p className="text-xs text-muted-foreground">
                   {p.discount_type === 'percentage' ? `${p.discount_value}% off` : p.discount_type === 'fixed' ? `${p.discount_value} ETB off` : 'Free delivery'}
-                  {' · '} Used {p.times_used || 0} times
+                  {'  |  '} Used {p.times_used || 0} times
                 </p>
               </div>
               <Switch checked={!!p.is_active} onCheckedChange={() => toggle(p)} />
@@ -175,7 +184,7 @@ export default function RestaurantPromotions() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep promotion</AlertDialogCancel>
-            <AlertDialogAction onClick={() => remove(deletingPromo)}>Delete promotion</AlertDialogAction>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => remove(deletingPromo)}>Delete promotion</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

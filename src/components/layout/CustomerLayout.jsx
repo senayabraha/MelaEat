@@ -12,7 +12,7 @@ export default function CustomerLayout() {
       <footer className="border-t border-border/60 mt-16 py-10 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} MelaEat. Made for Ethiopia.
+            (c) {new Date().getFullYear()} MelaEat. Made for Ethiopia.
           </div>
           <div className="flex gap-6 text-sm text-muted-foreground">
             <Link to="/signup/restaurant" className="hover:text-foreground">For Restaurants</Link>

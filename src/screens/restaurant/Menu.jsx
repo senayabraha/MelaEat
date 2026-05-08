@@ -98,6 +98,12 @@ export default function RestaurantMenu() {
 
       <div className="bg-card border border-border rounded-2xl p-5 mb-6">
         <h2 className="font-medium mb-3">Categories</h2>
+        {categories.length === 0 && (
+          <div className="rounded-xl border border-dashed border-border p-4 mb-4">
+            <p className="font-medium">No categories yet.</p>
+            <p className="text-sm text-muted-foreground mt-1">Add a category first, then create menu items.</p>
+          </div>
+        )}
         <div className="flex gap-2 flex-wrap mb-3">
           {categories.map(c => (
             <div key={c.id} className="flex items-center gap-2 bg-secondary rounded-full pl-3 pr-1.5 py-1">
@@ -128,7 +134,22 @@ export default function RestaurantMenu() {
               )}
             </div>
             <div className="bg-card border border-border rounded-2xl divide-y divide-border">
-              {cItems.length === 0 && <p className="p-5 text-sm text-muted-foreground">No items in this category.</p>}
+              {cItems.length === 0 && (
+                <div className="p-5">
+                  <p className="text-sm text-muted-foreground">No items in this category.</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-3"
+                    onClick={() => {
+                      setEditing({ category_id: c.id });
+                      setOpen(true);
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-1" /> Add first item
+                  </Button>
+                </div>
+              )}
               {cItems.map(it => (
                 <div key={it.id} className="p-4 flex items-center gap-4">
                   <div className="w-14 h-14 rounded-lg bg-secondary overflow-hidden shrink-0">
@@ -177,6 +198,7 @@ export default function RestaurantMenu() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 if (deleteTarget?.type === 'category') deleteCategory(deleteTarget.value);
                 if (deleteTarget?.type === 'item') deleteItem(deleteTarget.value);

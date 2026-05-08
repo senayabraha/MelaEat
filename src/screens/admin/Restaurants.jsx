@@ -6,12 +6,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AdminRestaurants() {
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', owner_email: '', city: 'Addis Ababa' });
-  const { data: restaurants = [] } = useQuery({
+  const { data: restaurants = [], isLoading } = useQuery({
     queryKey: ['admin-restaurants-full'],
     queryFn: () => base44.entities.Restaurant.list('-created_date', 500),
   });
@@ -41,7 +42,21 @@ export default function AdminRestaurants() {
         <Button onClick={() => setShowCreate(true)}>Add restaurant</Button>
       </div>
       <div className="bg-card border border-border rounded-2xl divide-y divide-border">
-        {restaurants.map(r => (
+        {isLoading && (
+          <div className="p-6 space-y-3">
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        )}
+        {!isLoading && restaurants.length === 0 && (
+          <div className="p-6">
+            <p className="font-medium">No restaurants yet.</p>
+            <p className="text-sm text-muted-foreground mt-1">Add your first restaurant to start onboarding partners.</p>
+            <Button className="mt-4" onClick={() => setShowCreate(true)}>Add restaurant</Button>
+          </div>
+        )}
+        {restaurants.map((r) => (
           <div key={r.id} className="p-4 flex items-center gap-4">
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{r.name}</p>

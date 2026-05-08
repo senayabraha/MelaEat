@@ -26,7 +26,7 @@ export default function RestaurantLayout() {
         return;
       }
       setUser(u);
-    }).catch(() => base44.auth.redirectToLogin(window.location.href));
+    }).catch(() => base44.auth.redirectToLogin(window.location.href, 'restaurant'));
   }, [navigate]);
 
   if (!user) return null;

@@ -1,17 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { base44, isSupabaseConfigured, supabase } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Logo from '@/components/layout/Logo';
 
-const allowedRoles = new Set(['customer', 'restaurant', 'driver']);
+const allowedRoles = new Set(['customer', 'restaurant', 'driver', 'admin']);
 
 const roleLabels = {
   customer: 'customer',
   restaurant: 'restaurant partner',
   driver: 'driver',
+  admin: 'admin',
 };
 
 const roleDestinations = {
@@ -22,10 +23,16 @@ const roleDestinations = {
 };
 
 export default function Login() {
+  const { role: routeRole } = useParams();
+  const location = useLocation();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const selectedRole = allowedRoles.has(params.get('role')) ? params.get('role') : 'customer';
-  const [mode, setMode] = useState(params.get('mode') === 'signup' ? 'signup' : 'signin');
+  const requestedRole = params.get('role') || routeRole;
+  const selectedRole = allowedRoles.has(requestedRole) ? requestedRole : 'customer';
+  const initialMode = selectedRole !== 'admin' && (
+    location.pathname.startsWith('/signup') || params.get('mode') === 'signup' || params.get('mode') === 'sign-up'
+  ) ? 'signup' : 'signin';
+  const [mode, setMode] = useState(initialMode);
   const [fullName, setFullName] = useState('');
   const [restaurantName, setRestaurantName] = useState('');
   const [email, setEmail] = useState('');
@@ -35,6 +42,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const hasRedirect = Boolean(params.get('redirect'));
+  const isSignupAllowed = selectedRole !== 'admin';
 
   const redirectTo = useMemo(() => {
     const target = params.get('redirect');
@@ -56,8 +64,19 @@ export default function Login() {
     let role = currentUser.role === 'user' ? selectedRole : currentUser.role;
 
     if (currentUser.role === 'user') {
+      if (selectedRole === 'admin') {
+        await supabase.auth.signOut();
+        throw new Error('Admin accounts must be assigned by an existing admin before sign in.');
+      }
       const updated = await base44.users.completeRole(selectedRole);
       role = updated.role;
+    }
+
+    if (role !== selectedRole) {
+      await supabase.auth.signOut();
+      throw new Error(
+        `This account is registered as a ${roleLabels[role] || role}. Please use the ${roleLabels[role] || role} login page.`
+      );
     }
 
     if (role === 'restaurant' && !currentUser.restaurant_id) {
@@ -89,6 +108,10 @@ export default function Login() {
         if (signInError) throw signInError;
         await finishAuth();
         return;
+      }
+
+      if (!isSignupAllowed) {
+        throw new Error('Admin accounts cannot be created from this page.');
       }
 
       if (password.length < 6) {
@@ -146,7 +169,7 @@ export default function Login() {
         </div>
         <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
           <h1 className="font-display text-2xl font-semibold mb-2">
-            {mode === 'signin' ? 'Sign in' : 'Create your account'}
+            {mode === 'signin' ? `${roleLabels[selectedRole]} sign in` : `Create your ${roleLabels[selectedRole]} account`}
           </h1>
           <p className="text-sm text-muted-foreground mb-6">
             {mode === 'signin'
@@ -224,24 +247,26 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="mt-4 text-sm text-muted-foreground">
-            {mode === 'signin' ? "Don't have an account yet?" : 'Already have an account?'}{' '}
-            <button
-              type="button"
-              className="font-medium text-primary hover:underline"
-              onClick={() => {
-                setMode(mode === 'signin' ? 'signup' : 'signin');
-                setError('');
-                setMessage('');
-              }}
-            >
-              {mode === 'signin' ? 'Create one' : 'Sign in'}
-            </button>
-          </p>
+          {isSignupAllowed && (
+            <p className="mt-4 text-sm text-muted-foreground">
+              {mode === 'signin' ? "Don't have an account yet?" : 'Already have an account?'}{' '}
+              <button
+                type="button"
+                className="font-medium text-primary hover:underline"
+                onClick={() => {
+                  setMode(mode === 'signin' ? 'signup' : 'signin');
+                  setError('');
+                  setMessage('');
+                }}
+              >
+                {mode === 'signin' ? 'Create one' : 'Sign in'}
+              </button>
+            </p>
+          )}
 
-          {mode === 'signin' && (
+          {mode === 'signin' && isSignupAllowed && (
             <p className="mt-2 text-xs text-muted-foreground">
-              New here? <Link className="text-primary hover:underline" to={`/login?mode=signup&role=${selectedRole}`}>Start with sign up</Link>
+              New here? <Link className="text-primary hover:underline" to={`/signup/${selectedRole}`}>Start with sign up</Link>
             </p>
           )}
         </div>

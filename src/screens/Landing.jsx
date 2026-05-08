@@ -45,10 +45,10 @@ export default function Landing() {
           <Logo linkTo="/" />
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="sm">
-              <Link to={`/login?role=${activeRole}`}>Sign in</Link>
+              <Link to={`/login/${activeRole}`}>Sign in</Link>
             </Button>
             <Button asChild size="sm">
-              <Link to={`/login?mode=signup&role=${activeRole}`}>Sign up</Link>
+              <Link to={`/signup/${activeRole}`}>Sign up</Link>
             </Button>
           </div>
         </div>
@@ -105,12 +105,12 @@ export default function Landing() {
 
                   <div className="mt-5 flex flex-col sm:flex-row gap-3">
                     <Button asChild className="flex-1">
-                      <Link to={`/login?mode=signup&role=${activeRole}`}>
+                      <Link to={`/signup/${activeRole}`}>
                         Continue as {active.label} <ArrowRight className="w-4 h-4 ml-2" />
                       </Link>
                     </Button>
                     <Button asChild variant="outline" className="flex-1">
-                      <Link to={`/login?role=${activeRole}`}>I already have an account</Link>
+                      <Link to={`/login/${activeRole}`}>I already have an account</Link>
                     </Button>
                   </div>
                 </div>
@@ -161,10 +161,10 @@ export default function Landing() {
                         <p className="text-sm text-muted-foreground mt-1">{role.description}</p>
                         <div className="mt-4 flex flex-wrap gap-2">
                           <Button asChild size="sm">
-                            <Link to={`/login?mode=signup&role=${key}`}>Start as {role.label}</Link>
+                            <Link to={`/signup/${key}`}>Start as {role.label}</Link>
                           </Button>
                           <Button asChild size="sm" variant="ghost">
-                            <Link to={`/login?role=${key}`}>Sign in</Link>
+                            <Link to={`/login/${key}`}>Sign in</Link>
                           </Button>
                         </div>
                       </div>

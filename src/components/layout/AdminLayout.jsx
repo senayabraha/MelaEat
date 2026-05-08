@@ -20,7 +20,7 @@ export default function AdminLayout() {
     base44.auth.me().then((u) => {
       if (u.role !== 'admin') { navigate('/'); return; }
       setUser(u);
-    }).catch(() => base44.auth.redirectToLogin(window.location.href));
+    }).catch(() => base44.auth.redirectToLogin(window.location.href, 'admin'));
   }, [navigate]);
 
   if (!user) return null;

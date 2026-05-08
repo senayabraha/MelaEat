@@ -192,8 +192,9 @@ export const base44 = {
     },
 
     redirectToLogin(returnTo = window.location.href, role = 'customer') {
+      const loginRole = ['customer', 'restaurant', 'driver', 'admin'].includes(role) ? role : 'customer';
       const redirect = encodeURIComponent(returnTo);
-      window.location.href = `/login/${role}?redirect=${redirect}`;
+      window.location.href = `/login/${loginRole}?redirect=${redirect}`;
     },
 
     async logout() {

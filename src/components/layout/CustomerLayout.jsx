@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import CustomerHeader from './CustomerHeader';
 
 export default function CustomerLayout() {
@@ -15,8 +15,8 @@ export default function CustomerLayout() {
             © {new Date().getFullYear()} MelaEat. Made for Ethiopia.
           </div>
           <div className="flex gap-6 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground">For Restaurants</a>
-            <a href="#" className="hover:text-foreground">For Drivers</a>
+            <Link to="/signup/restaurant" className="hover:text-foreground">For Restaurants</Link>
+            <Link to="/signup/driver" className="hover:text-foreground">For Drivers</Link>
             <a href="#" className="hover:text-foreground">Support</a>
           </div>
         </div>

@@ -43,11 +43,15 @@ export async function POST(request) {
 
     const { data: profile, error: profileError } = await admin
       .from('profiles')
-      .select('restaurant_id, full_name')
+      .select('restaurant_id, full_name, role')
       .eq('id', user.id)
       .maybeSingle();
 
     if (profileError) throw profileError;
+
+    if (profile?.role && !['user', 'restaurant'].includes(profile.role)) {
+      return NextResponse.json({ error: 'Only restaurant accounts can set up a restaurant profile' }, { status: 403 });
+    }
 
     let restaurant = null;
 

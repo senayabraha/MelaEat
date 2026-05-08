@@ -25,7 +25,7 @@ export default function DriverLayout() {
         return;
       }
       setUser(u);
-    }).catch(() => base44.auth.redirectToLogin(window.location.href));
+    }).catch(() => base44.auth.redirectToLogin(window.location.href, 'driver'));
   }, [navigate]);
 
   if (!user) return null;

@@ -62,6 +62,12 @@ export default function RestaurantMenu() {
     refresh();
     toast({ title: it.in_stock ? 'Marked out of stock' : 'Marked in stock' });
   };
+  const setCategoryStock = async (categoryId, inStock) => {
+    const cItems = items.filter(i => i.category_id === categoryId);
+    await Promise.all(cItems.map((it) => base44.entities.MenuItem.update(it.id, { in_stock: inStock })));
+    refresh();
+    toast({ title: inStock ? 'Category marked in stock' : 'Category marked out of stock' });
+  };
   const deleteItem = async (it) => {
     if (!confirm(`Delete "${it.name}"?`)) return;
     await base44.entities.MenuItem.delete(it.id);
@@ -101,7 +107,15 @@ export default function RestaurantMenu() {
         const cItems = items.filter(i => i.category_id === c.id);
         return (
           <div key={c.id} className="mb-6">
-            <h3 className="font-display text-xl font-semibold mb-3">{c.name}</h3>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <h3 className="font-display text-xl font-semibold">{c.name}</h3>
+              {cItems.length > 0 && (
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setCategoryStock(c.id, true)}>All in stock</Button>
+                  <Button variant="outline" size="sm" onClick={() => setCategoryStock(c.id, false)}>All out</Button>
+                </div>
+              )}
+            </div>
             <div className="bg-card border border-border rounded-2xl divide-y divide-border">
               {cItems.length === 0 && <p className="p-5 text-sm text-muted-foreground">No items in this category.</p>}
               {cItems.map(it => (

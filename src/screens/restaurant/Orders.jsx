@@ -14,6 +14,7 @@ export default function RestaurantOrders() {
   const [restaurant, setRestaurant] = useState(null);
   const [rejectingOrder, setRejectingOrder] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
+  const previousActiveCount = React.useRef(null);
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -67,9 +68,9 @@ export default function RestaurantOrders() {
       toast({ title: 'Could not reject order', description: error.message || 'Please try again.', variant: 'destructive' });
     }
   };
-  const advance = async (o, value) => {
+  const advance = async (o, value, extra = {}) => {
     try {
-      await base44.orders.action(o.id, { action: value });
+      await base44.orders.action(o.id, { action: value, ...extra });
       refresh();
     } catch (error) {
       toast({ title: 'Could not update order', description: error.message || 'Please try again.', variant: 'destructive' });
@@ -85,13 +86,24 @@ export default function RestaurantOrders() {
     }
   };
 
-  if (!restaurant) return null;
-
   const buckets = {
     new: orders.filter(o => o.status === 'pending'),
     active: orders.filter(o => ['accepted', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(o.status)),
     completed: orders.filter(o => ['delivered', 'rejected', 'cancelled'].includes(o.status)),
   };
+
+  useEffect(() => {
+    if (previousActiveCount.current === null) {
+      previousActiveCount.current = buckets.active.length;
+      return;
+    }
+    if (buckets.active.length > previousActiveCount.current) {
+      toast({ title: 'New order received', description: 'It is already accepted and ready to prepare.' });
+    }
+    previousActiveCount.current = buckets.active.length;
+  }, [buckets.active.length, toast]);
+
+  if (!restaurant) return null;
 
   return (
     <div className="p-6 sm:p-8 max-w-6xl">

@@ -36,6 +36,7 @@ const tables = {
   Promotion: 'promotions',
   ChatMessage: 'chat_messages',
   IssueReport: 'issue_reports',
+  OrderStatusEvent: 'order_status_events',
 };
 
 const mapAuthUser = (authUser, profile = {}) => ({
@@ -245,6 +246,25 @@ export const base44 = {
   },
 
   orders: {
+    async create(payload) {
+      const accessToken = await getSessionAccessToken();
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: 'Failed to place order' }));
+        throw new Error(result.error || 'Failed to place order');
+      }
+
+      return response.json();
+    },
+
     async action(orderId, payload) {
       const accessToken = await getSessionAccessToken();
       const response = await fetch(`/api/orders/${orderId}/action`, {

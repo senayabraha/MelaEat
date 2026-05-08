@@ -2,7 +2,12 @@ import React from 'react';
 import { Check } from 'lucide-react';
 import { statusLabel } from '@/lib/format';
 
-const FLOW = ['pending', 'accepted', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way', 'delivered'];
+const FLOW = ['accepted', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way', 'delivered'];
+
+const stepLabel = (status) => {
+  if (status === 'accepted') return 'Order received';
+  return statusLabel(status);
+};
 
 export default function OrderStatusTimeline({ status }) {
   if (status === 'rejected' || status === 'cancelled') {
@@ -26,7 +31,7 @@ export default function OrderStatusTimeline({ status }) {
               {done ? <Check className="w-3.5 h-3.5" /> : <span className="w-1.5 h-1.5 rounded-full bg-current" />}
             </div>
             <span className={`text-sm ${active ? 'font-semibold' : done ? 'text-foreground' : 'text-muted-foreground'}`}>
-              {statusLabel(s)}
+              {stepLabel(s)}
             </span>
             {active && (
               <span className="ml-auto text-xs font-medium text-primary">In progress</span>

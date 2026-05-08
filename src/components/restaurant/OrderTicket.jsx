@@ -1,7 +1,7 @@
 import React from 'react';
 import { Phone, MapPin, Clock, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatETB, statusLabel, statusColor, timeAgo } from '@/lib/format';
+import { formatETB, statusLabel, statusColor, timeAgo, paymentStatusLabel, paymentStatusColor } from '@/lib/format';
 
 export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAssign, drivers = [] }) {
   const handlePrint = () => {
@@ -32,7 +32,6 @@ export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAs
   };
 
   const next = (() => {
-    if (order.status === 'accepted') return { label: 'Mark preparing', value: 'preparing' };
     if (order.status === 'preparing') return { label: 'Mark ready', value: 'ready_for_pickup' };
     return null;
   })();
@@ -43,6 +42,7 @@ export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAs
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded border ${statusColor(order.status)}`}>{statusLabel(order.status)}</span>
+            <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded border ${paymentStatusColor(order.payment_status)}`}>{paymentStatusLabel(order.payment_status)}</span>
             <span className="text-xs text-muted-foreground">{timeAgo(order.created_date)}</span>
           </div>
           <h3 className="font-display text-lg font-semibold">{order.order_number}</h3>
@@ -73,6 +73,9 @@ export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAs
         {order.is_scheduled && (
           <p className="flex items-center gap-2 text-primary font-medium"><Clock className="w-3.5 h-3.5" /> Scheduled: {new Date(order.scheduled_for).toLocaleString()}</p>
         )}
+        {order.estimated_ready_at && (
+          <p className="flex items-center gap-2 text-primary font-medium"><Clock className="w-3.5 h-3.5" /> Ready around {new Date(order.estimated_ready_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</p>
+        )}
       </div>
 
       <div className="p-4 border-t border-border flex flex-wrap gap-2">
@@ -81,6 +84,23 @@ export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAs
             <Button size="sm" onClick={() => onAccept(order)} className="flex-1">Accept</Button>
             <Button size="sm" variant="outline" onClick={() => onReject(order)}>Reject</Button>
           </>
+        )}
+        {order.status === 'accepted' && (
+          <div className="w-full">
+            <p className="text-xs font-medium text-muted-foreground mb-2">Start prep with ready estimate</p>
+            <div className="grid grid-cols-4 gap-2">
+              {[10, 15, 20, 30].map((minutes) => (
+                <Button
+                  key={minutes}
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onAdvance(order, 'preparing', { estimated_ready_minutes: minutes })}
+                >
+                  {minutes}m
+                </Button>
+              ))}
+            </div>
+          </div>
         )}
         {next && (
           <Button size="sm" onClick={() => onAdvance(order, next.value)} className="flex-1">{next.label}</Button>

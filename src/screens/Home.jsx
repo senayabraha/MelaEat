@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Search, ArrowRight } from 'lucide-react';
+import { Search, ArrowRight, MapPin, Store, Bike } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import RestaurantCard from '@/components/customer/RestaurantCard';
 import CuisineFilter from '@/components/customer/CuisineFilter';
@@ -29,14 +29,16 @@ export default function Home() {
 
   const featured = filtered.filter((r) => r.is_featured).slice(0, 3);
   const all = filtered.filter((r) => !featured.includes(r));
+  const openCount = restaurants.filter((r) => r.is_open_manual !== false).length;
+  const averageFee = restaurants.length
+    ? Math.round(restaurants.reduce((sum, r) => sum + (r.delivery_fee || 0), 0) / restaurants.length)
+    : 0;
 
   return (
     <div>
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border/60">
         <div className="absolute inset-0 grain opacity-60" />
-        <div className="absolute -top-32 -right-32 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-32 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary border border-border text-xs font-medium text-muted-foreground mb-6">
@@ -68,6 +70,20 @@ export default function Home() {
               >
                 Explore <ArrowRight className="w-4 h-4" />
               </Link>
+            </div>
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl">
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                <MapPin className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">Addis Ababa delivery</span>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                <Store className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">{openCount} open now</span>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                <Bike className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium">Avg. {averageFee} ETB delivery</span>
+              </div>
             </div>
           </div>
         </div>

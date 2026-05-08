@@ -5,10 +5,20 @@ import { base44 } from '@/api/base44Client';
 import { Phone, MapPin, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import OrderStatusTimeline from '@/components/orders/OrderStatusTimeline';
 import OrderChat from '@/components/orders/OrderChat';
-import { formatETB, statusLabel, statusColor, paymentStatusLabel } from '@/lib/format';
+import { formatETB, statusLabel, statusColor, paymentStatusLabel, paymentStatusColor } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function OrderTracking() {
@@ -17,6 +27,7 @@ export default function OrderTracking() {
   const [restaurantStars, setRestaurantStars] = useState(0);
   const [driverStars, setDriverStars] = useState(0);
   const [review, setReview] = useState('');
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const { toast } = useToast();
 
   const { data: order, refetch } = useQuery({
@@ -52,12 +63,28 @@ export default function OrderTracking() {
     refetch();
   };
 
+  const cancelOrder = async () => {
+    try {
+      await base44.orders.action(id, { action: 'customer_cancel', reason: 'Cancelled by customer' });
+      setConfirmCancel(false);
+      toast({ title: 'Order cancelled' });
+      refetch();
+    } catch (error) {
+      toast({
+        title: 'Could not cancel order',
+        description: error.message || 'Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (!order) {
     return <div className="max-w-2xl mx-auto px-4 py-20 text-center text-muted-foreground">Loading order…</div>;
   }
 
   const isDelivered = order.status === 'delivered';
   const alreadyRated = !!order.customer_rating_restaurant;
+  const canCancel = ['accepted', 'pending'].includes(order.status);
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -65,10 +92,22 @@ export default function OrderTracking() {
         <div>
           <p className="text-sm text-muted-foreground">Order {order.order_number}</p>
           <h1 className="font-display text-3xl font-semibold mt-1">{order.restaurant_name}</h1>
+          {order.estimated_ready_at && !isDelivered && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Estimated ready {new Date(order.estimated_ready_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+            </p>
+          )}
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusColor(order.status)}`}>
-          {statusLabel(order.status)}
-        </span>
+        <div className="flex flex-col items-end gap-2">
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusColor(order.status)}`}>
+            {statusLabel(order.status)}
+          </span>
+          {canCancel && (
+            <Button variant="outline" size="sm" onClick={() => setConfirmCancel(true)}>
+              Cancel order
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -141,7 +180,12 @@ export default function OrderTracking() {
             </div>
             <div className="border-t border-border mt-4 pt-4 text-xs text-muted-foreground space-y-1">
               <p className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5" /> {order.delivery_address_text || 'Pin location'}</p>
-              <p>Payment: {paymentStatusLabel(order.payment_status)}</p>
+              <p>
+                Payment:{' '}
+                <span className={`inline-flex px-2 py-0.5 rounded border font-medium ${paymentStatusColor(order.payment_status)}`}>
+                  {paymentStatusLabel(order.payment_status)}
+                </span>
+              </p>
             </div>
           </section>
         </div>
@@ -171,6 +215,21 @@ export default function OrderTracking() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can cancel before the restaurant starts preparing it. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep order</AlertDialogCancel>
+            <AlertDialogAction onClick={cancelOrder}>Cancel order</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -36,7 +36,21 @@ const settleCashPaymentOnDelivery = (order, patch) => {
   return {
     ...patch,
     payment_status: 'paid',
+    cash_collected_at: new Date().toISOString(),
+    payment_confirmed_at: new Date().toISOString(),
   };
+};
+
+const writeOrderEvent = async (admin, orderId, actor, action, fromStatus, toStatus, note) => {
+  await admin.from('order_status_events').insert({
+    order_id: orderId,
+    actor_email: actor.email,
+    actor_role: actor.role,
+    action,
+    from_status: fromStatus,
+    to_status: toStatus,
+    note,
+  }).throwOnError();
 };
 
 export async function POST(request, { params }) {
@@ -70,6 +84,7 @@ export async function POST(request, { params }) {
     if (!profile) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
+    const actorRole = profile.role || 'customer';
 
     const { data: order, error: orderError } = await admin
       .from('orders')
@@ -101,6 +116,10 @@ export async function POST(request, { params }) {
       }
 
       patch = transition.patch(body);
+      if (action === 'preparing' && body.estimated_ready_minutes) {
+        const minutes = Math.max(5, Math.min(120, Number(body.estimated_ready_minutes)));
+        patch.estimated_ready_at = new Date(Date.now() + minutes * 60000).toISOString();
+      }
     } else if (action === 'assign_driver') {
       if (!isRestaurantManager(user, profile, restaurant)) {
         return NextResponse.json({ error: 'Only this restaurant or an admin can assign a driver.' }, { status: 403 });
@@ -130,6 +149,18 @@ export async function POST(request, { params }) {
       }
 
       patch = { driver_email: driver.email, driver_name: driver.full_name };
+    } else if (action === 'customer_cancel') {
+      if (profile.role !== 'admin' && order.customer_email !== user.email) {
+        return NextResponse.json({ error: 'Only this customer or an admin can cancel this order.' }, { status: 403 });
+      }
+      if (!['accepted', 'pending'].includes(order.status)) {
+        return NextResponse.json({ error: 'This order can no longer be cancelled.' }, { status: 400 });
+      }
+
+      patch = {
+        status: 'cancelled',
+        rejection_reason: String(body.reason || 'Cancelled by customer').trim(),
+      };
     } else if (action === 'driver_accept') {
       if (profile.role !== 'driver') {
         return NextResponse.json({ error: 'Only drivers can accept deliveries.' }, { status: 403 });
@@ -181,6 +212,16 @@ export async function POST(request, { params }) {
       .single();
 
     if (updateError) throw updateError;
+
+    writeOrderEvent(
+      admin,
+      id,
+      { email: user.email, role: actorRole },
+      action,
+      order.status,
+      updatedOrder.status,
+      body.reason || null
+    ).catch(() => {});
 
     if (action === 'driver_accept') {
       await admin

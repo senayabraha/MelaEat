@@ -162,6 +162,9 @@ create table if not exists public.orders (
   accepted_at timestamptz,
   picked_up_at timestamptz,
   delivered_at timestamptz,
+  cash_collected_at timestamptz,
+  payment_confirmed_at timestamptz,
+  payment_note text,
   customer_rating_restaurant numeric,
   customer_rating_driver numeric,
   customer_review text,
@@ -174,6 +177,11 @@ alter column status set default 'accepted';
 
 alter table public.orders
 alter column payment_status set default 'cash_on_delivery';
+
+alter table public.orders
+add column if not exists cash_collected_at timestamptz,
+add column if not exists payment_confirmed_at timestamptz,
+add column if not exists payment_note text;
 
 alter table public.orders
 drop constraint if exists orders_payment_status_check;
@@ -222,6 +230,12 @@ as $$
 begin
   if new.status = 'delivered' and new.payment_method = 'cash' then
     new.payment_status := 'paid';
+    if new.cash_collected_at is null then
+      new.cash_collected_at := now();
+    end if;
+    if new.payment_confirmed_at is null then
+      new.payment_confirmed_at := now();
+    end if;
   end if;
 
   return new;
@@ -283,6 +297,20 @@ create index if not exists orders_restaurant_idx on public.orders(restaurant_id)
 create index if not exists orders_driver_idx on public.orders(driver_email);
 create index if not exists chat_messages_order_idx on public.chat_messages(order_id);
 create index if not exists profiles_driver_approval_idx on public.profiles(driver_approval_status);
+
+create table if not exists public.order_status_events (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.orders(id) on delete cascade,
+  actor_email text,
+  actor_role text,
+  action text not null,
+  from_status text,
+  to_status text,
+  note text,
+  created_date timestamptz not null default now()
+);
+
+create index if not exists order_status_events_order_idx on public.order_status_events(order_id);
 
 create or replace function public.current_user_email()
 returns text
@@ -367,6 +395,7 @@ alter table public.orders enable row level security;
 alter table public.promotions enable row level security;
 alter table public.chat_messages enable row level security;
 alter table public.issue_reports enable row level security;
+alter table public.order_status_events enable row level security;
 
 drop policy if exists "public restaurant read" on public.restaurants;
 drop policy if exists "public menu category read" on public.menu_categories;
@@ -408,6 +437,8 @@ drop policy if exists "issue read order participants" on public.issue_reports;
 drop policy if exists "issue insert order participants" on public.issue_reports;
 drop policy if exists "issue update restaurant driver admin" on public.issue_reports;
 drop policy if exists "issue delete admin only" on public.issue_reports;
+drop policy if exists "order event read participants" on public.order_status_events;
+drop policy if exists "order event insert participants" on public.order_status_events;
 
 create policy "profile read access" on public.profiles
 for select
@@ -534,6 +565,16 @@ create policy "order delete admin only" on public.orders
 for delete
 to authenticated
 using (public.is_admin());
+
+create policy "order event read participants" on public.order_status_events
+for select
+to authenticated
+using (public.can_access_order(order_id));
+
+create policy "order event insert participants" on public.order_status_events
+for insert
+to authenticated
+with check (public.can_access_order(order_id));
 
 create policy "promotion read access" on public.promotions
 for select

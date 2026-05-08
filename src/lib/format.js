@@ -77,3 +77,14 @@ export function paymentStatusLabel(status) {
   };
   return map[status] || status;
 }
+
+export function paymentStatusColor(status) {
+  const map = {
+    pending: 'bg-amber-100 text-amber-800 border-amber-200',
+    cash_on_delivery: 'bg-orange-100 text-orange-800 border-orange-200',
+    paid: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    failed: 'bg-red-100 text-red-800 border-red-200',
+    refunded: 'bg-slate-100 text-slate-700 border-slate-200',
+  };
+  return map[status] || 'bg-muted text-muted-foreground border-border';
+}

@@ -5,6 +5,16 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Phone, MapPin, ExternalLink, AlertTriangle } from 'lucide-react';
 import { formatETB, statusLabel, statusColor } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
@@ -16,6 +26,7 @@ export default function DriverActive() {
   const { toast } = useToast();
   const [issueOrder, setIssueOrder] = React.useState(null);
   const [issueDescription, setIssueDescription] = React.useState('');
+  const [cashOrder, setCashOrder] = React.useState(null);
   const approved = !user.driver_approval_status || user.driver_approval_status === 'approved';
 
   // Available orders (ready, no driver yet)
@@ -60,6 +71,14 @@ export default function DriverActive() {
   };
 
   const updateStatus = async (o, status) => {
+    if (status === 'delivered' && o.payment_method === 'cash' && o.payment_status !== 'paid') {
+      setCashOrder(o);
+      return;
+    }
+    await submitStatusUpdate(o, status);
+  };
+
+  const submitStatusUpdate = async (o, status) => {
     try {
       await base44.orders.action(o.id, { action: status });
       await refreshUser();
@@ -71,6 +90,12 @@ export default function DriverActive() {
         variant: 'destructive',
       });
     }
+  };
+
+  const confirmCashDelivery = async () => {
+    if (!cashOrder) return;
+    await submitStatusUpdate(cashOrder, 'delivered');
+    setCashOrder(null);
   };
 
   const reportIssue = async (o) => {
@@ -156,6 +181,21 @@ export default function DriverActive() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!cashOrder} onOpenChange={(open) => !open && setCashOrder(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm cash collection</AlertDialogTitle>
+            <AlertDialogDescription>
+              Collect {formatETB(cashOrder?.total || 0)} from {cashOrder?.customer_name} before marking this order delivered and paid.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Not yet</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCashDelivery}>Cash collected</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -184,7 +224,7 @@ function ActiveCard({ order, onUpdateStatus, onReportIssue }) {
           <p className="text-lg font-semibold">{formatETB(order.delivery_fee || 0)}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-          <Stop title="Pickup" name={order.restaurant_name} address={order.restaurant_name} lat={null} />
+          <Stop title="Pickup" name={order.restaurant_name} address={order.restaurant_name} lat={order.restaurant_lat} lng={order.restaurant_lng} />
           <Stop title="Drop-off" name={order.customer_name} phone={order.customer_phone} address={order.delivery_address_text} lat={order.delivery_lat} lng={order.delivery_lng} />
         </div>
       </div>
@@ -208,7 +248,8 @@ function ActiveCard({ order, onUpdateStatus, onReportIssue }) {
 }
 
 function Stop({ title, name, phone, address, lat, lng }) {
-  const mapsUrl = lat && lng ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}` : null;
+  const destination = lat && lng ? `${lat},${lng}` : address || name;
+  const mapsUrl = destination ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}` : null;
   return (
     <div className="bg-secondary rounded-xl p-3">
       <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">{title}</p>

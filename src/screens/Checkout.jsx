@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useCart } from '@/lib/cart';
-import { formatETB, generateOrderNumber } from '@/lib/format';
+import { formatETB, isOpenNow } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
 import MapPicker from '@/components/customer/MapPicker';
 import { MapPin, Loader2 } from 'lucide-react';
@@ -109,45 +109,31 @@ export default function Checkout() {
       toast({ title: 'Please pick a delivery time', variant: 'destructive' });
       return;
     }
+    if (!isOpenNow(restaurant)) {
+      toast({ title: 'This restaurant is not accepting orders right now', variant: 'destructive' });
+      return;
+    }
     setSubmitting(true);
     try {
-      const order = {
-        order_number: generateOrderNumber(),
-        customer_email: user.email,
-        customer_name: user.full_name,
+      const payload = {
         customer_phone: phone,
         restaurant_id: cart.restaurant_id,
-        restaurant_name: cart.restaurant_name,
         items: cart.items.map((it) => ({
           menu_item_id: it.menu_item_id,
-          name: it.name,
           quantity: it.quantity,
-          unit_price: it.unit_price,
           selected_options: it.selected_options,
-          line_total: it.line_total,
           notes: it.notes,
         })),
-        subtotal,
-        delivery_fee: freeDelivery ? 0 : deliveryFee,
-        discount,
-        total,
         promo_code: appliedPromo?.code,
         payment_method: paymentMethod,
-        payment_status: paymentMethod === 'cash' ? 'cash_on_delivery' : 'paid',
         delivery_lat: lat,
         delivery_lng: lng,
         delivery_address_text: addressText,
         delivery_notes: notes,
         is_scheduled: deliveryMode === 'schedule',
         scheduled_for: deliveryMode === 'schedule' ? new Date(scheduledTime).toISOString() : null,
-        status: 'accepted',
-        accepted_at: new Date().toISOString(),
       };
-      const created = await base44.entities.Order.create(order);
-      if (appliedPromo) {
-        base44.entities.Promotion.update(appliedPromo.id, { times_used: (appliedPromo.times_used || 0) + 1 }).catch(() => {});
-      }
-      await base44.auth.updateMe({ phone, default_lat: lat, default_lng: lng, default_address_text: addressText });
+      const { order: created } = await base44.orders.create(payload);
       clear();
       navigate(`/order/${created.id}`);
     } catch (error) {

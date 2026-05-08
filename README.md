@@ -48,5 +48,17 @@ https://your-vercel-domain.vercel.app/**
 
 The app uses `SUPABASE_SERVICE_ROLE_KEY` only on the server for privileged flows such as:
 
+- `POST /api/orders` to validate cart pricing, promos, restaurant availability, auto-accept orders, and create audit events
+- `POST /api/orders/:id/action` to move order status, cancel eligible orders, assign drivers, and settle cash payments on delivery
 - `POST /api/restaurant/setup` to create and link a restaurant profile for a restaurant owner
 - `POST /api/orders/:id/rate` to save customer ratings and refresh restaurant/driver aggregates
+
+## Production Checklist
+
+- Run the latest `sql/schema.sql` in Supabase SQL editor after pulling changes.
+- Confirm `order_status_events`, cash payment fields, and order triggers exist in Supabase.
+- Confirm Storage has the `restaurant-assets` public bucket.
+- Confirm Vercel has all four environment variables from `.env.example`.
+- Place a test cash order and verify it starts as `cash_on_delivery`, then becomes `paid` when the driver marks it delivered.
+- Place a test card or Telebirr order and verify it starts as `paid`.
+- Verify restaurant owners see active auto-accepted orders and can set prep estimates.

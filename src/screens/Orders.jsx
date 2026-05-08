@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, Repeat } from 'lucide-react';
-import { formatETB, statusLabel, statusColor, formatDate } from '@/lib/format';
+import { formatETB, statusLabel, statusColor, formatDate, paymentStatusLabel, paymentStatusColor } from '@/lib/format';
 import { useCart } from '@/lib/cart';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -58,6 +58,7 @@ export default function Orders() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded border ${statusColor(o.status)}`}>{statusLabel(o.status)}</span>
+                  <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded border ${paymentStatusColor(o.payment_status)}`}>{paymentStatusLabel(o.payment_status)}</span>
                   <span className="text-xs text-muted-foreground">{formatDate(o.created_date)}</span>
                 </div>
                 <h3 className="font-display text-lg font-semibold truncate">{o.restaurant_name}</h3>

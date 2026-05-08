@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { base44, isSupabaseConfigured, supabase } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,44 @@ export default function Login() {
   const hasRedirect = Boolean(params.get('redirect'));
   const isSignupAllowed = selectedRole !== 'admin';
   const isPasswordMode = mode === 'signin' || mode === 'signup' || mode === 'update-password';
+
+
+  useEffect(() => {
+    const processRecoveryLink = async () => {
+      if (!location.pathname.startsWith('/reset-password')) return;
+
+      const code = params.get('code');
+      const tokenHash = params.get('token_hash');
+      const type = params.get('type');
+
+      try {
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) throw exchangeError;
+          setMode('update-password');
+          return;
+        }
+
+        if (tokenHash && type === 'recovery') {
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'recovery',
+          });
+          if (verifyError) throw verifyError;
+          setMode('update-password');
+          return;
+        }
+
+        if (location.hash.includes('type=recovery')) {
+          setMode('update-password');
+        }
+      } catch (recoveryError) {
+        setError(recoveryError.message || 'Recovery link is invalid or expired. Request a new reset email.');
+      }
+    };
+
+    processRecoveryLink();
+  }, [location.hash, location.pathname, params]);
 
   const redirectTo = useMemo(() => {
     const target = params.get('redirect');

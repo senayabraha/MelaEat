@@ -7,15 +7,28 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Tag } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function RestaurantPromotions() {
   const { user } = useOutletContext();
   const [restaurant, setRestaurant] = useState(null);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({});
+  const [deletingPromo, setDeletingPromo] = useState(null);
   const qc = useQueryClient();
+  const { toast } = useToast();
 
   useEffect(() => {
     (async () => {
@@ -34,21 +47,42 @@ export default function RestaurantPromotions() {
   const refresh = () => qc.invalidateQueries({ queryKey: ['rest-promos'] });
 
   const create = async () => {
-    await base44.entities.Promotion.create({ ...form, code: form.code.toUpperCase(), restaurant_id: restaurant.id, is_active: true });
-    setOpen(false);
-    setForm({});
-    refresh();
+    const code = String(form.code || '').trim().toUpperCase();
+    if (!code) {
+      toast({ title: 'Promo code is required', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      await base44.entities.Promotion.create({ ...form, code, restaurant_id: restaurant.id, is_active: true });
+      setOpen(false);
+      setForm({});
+      refresh();
+      toast({ title: 'Promotion created' });
+    } catch (error) {
+      toast({ title: 'Could not create promotion', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
 
   const toggle = async (p) => {
-    await base44.entities.Promotion.update(p.id, { is_active: !p.is_active });
-    refresh();
+    try {
+      await base44.entities.Promotion.update(p.id, { is_active: !p.is_active });
+      refresh();
+    } catch (error) {
+      toast({ title: 'Could not update promotion', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
 
   const remove = async (p) => {
-    if (!confirm('Delete promo?')) return;
-    await base44.entities.Promotion.delete(p.id);
-    refresh();
+    if (!p) return;
+    try {
+      await base44.entities.Promotion.delete(p.id);
+      setDeletingPromo(null);
+      refresh();
+      toast({ title: 'Promotion deleted' });
+    } catch (error) {
+      toast({ title: 'Could not delete promotion', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
 
   if (!restaurant) return null;
@@ -84,7 +118,7 @@ export default function RestaurantPromotions() {
                 </p>
               </div>
               <Switch checked={!!p.is_active} onCheckedChange={() => toggle(p)} />
-              <Button variant="ghost" size="icon" onClick={() => remove(p)}><Trash2 className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={() => setDeletingPromo(p)}><Trash2 className="w-4 h-4" /></Button>
             </div>
           ))}
         </div>
@@ -126,10 +160,25 @@ export default function RestaurantPromotions() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={create}>Create</Button>
+            <Button onClick={create} disabled={!String(form.code || '').trim()}>Create</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deletingPromo} onOpenChange={(open) => !open && setDeletingPromo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this promotion?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Customers will no longer be able to use {deletingPromo?.code || 'this code'}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep promotion</AlertDialogCancel>
+            <AlertDialogAction onClick={() => remove(deletingPromo)}>Delete promotion</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

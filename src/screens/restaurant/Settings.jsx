@@ -33,16 +33,26 @@ export default function RestaurantSettings() {
 
   const save = async () => {
     setSaving(true);
-    await base44.entities.Restaurant.update(restaurant.id, form);
-    toast({ title: 'Settings saved' });
-    setSaving(false);
+    try {
+      await base44.entities.Restaurant.update(restaurant.id, form);
+      toast({ title: 'Settings saved' });
+    } catch (error) {
+      toast({ title: 'Could not save settings', description: error.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const upload = async (key, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm({ ...form, [key]: file_url });
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setForm({ ...form, [key]: file_url });
+      toast({ title: 'Image uploaded' });
+    } catch (error) {
+      toast({ title: 'Upload failed', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
 
   const setHours = (day, field, val) => {

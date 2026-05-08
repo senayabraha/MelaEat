@@ -9,6 +9,16 @@ import { Input } from '@/components/ui/input';
 import MenuItemForm from '@/components/restaurant/MenuItemForm';
 import { formatETB } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function RestaurantMenu() {
   const { user } = useOutletContext();
@@ -16,6 +26,7 @@ export default function RestaurantMenu() {
   const [editing, setEditing] = useState(null);
   const [open, setOpen] = useState(false);
   const [newCategory, setNewCategory] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -51,10 +62,10 @@ export default function RestaurantMenu() {
     refresh();
   };
   const deleteCategory = async (c) => {
-    if (!confirm(`Delete "${c.name}" and its items?`)) return;
     const its = items.filter(i => i.category_id === c.id);
     await Promise.all(its.map(i => base44.entities.MenuItem.delete(i.id)));
     await base44.entities.MenuCategory.delete(c.id);
+    setDeleteTarget(null);
     refresh();
   };
   const toggleStock = async (it) => {
@@ -69,8 +80,8 @@ export default function RestaurantMenu() {
     toast({ title: inStock ? 'Category marked in stock' : 'Category marked out of stock' });
   };
   const deleteItem = async (it) => {
-    if (!confirm(`Delete "${it.name}"?`)) return;
     await base44.entities.MenuItem.delete(it.id);
+    setDeleteTarget(null);
     refresh();
   };
 
@@ -91,7 +102,7 @@ export default function RestaurantMenu() {
           {categories.map(c => (
             <div key={c.id} className="flex items-center gap-2 bg-secondary rounded-full pl-3 pr-1.5 py-1">
               <span className="text-sm">{c.name}</span>
-              <button onClick={() => deleteCategory(c)} className="w-5 h-5 rounded-full hover:bg-destructive/20 flex items-center justify-center">
+              <button onClick={() => setDeleteTarget({ type: 'category', value: c })} className="w-5 h-5 rounded-full hover:bg-destructive/20 flex items-center justify-center">
                 <Trash2 className="w-3 h-3 text-muted-foreground" />
               </button>
             </div>
@@ -133,7 +144,7 @@ export default function RestaurantMenu() {
                       <span className="text-xs">{it.in_stock ? 'In' : 'Out'}</span>
                     </div>
                     <Button variant="ghost" size="icon" onClick={() => { setEditing(it); setOpen(true); }}><Pencil className="w-4 h-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => deleteItem(it)}><Trash2 className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleteTarget({ type: 'item', value: it })}><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>
               ))}
@@ -150,6 +161,32 @@ export default function RestaurantMenu() {
         categories={categories}
         restaurantId={restaurant.id}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {deleteTarget?.type === 'category' ? 'category' : 'item'}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.type === 'category'
+                ? `This will delete "${deleteTarget.value.name}" and all menu items inside it.`
+                : `This will delete "${deleteTarget?.value.name}" from your menu.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteTarget?.type === 'category') deleteCategory(deleteTarget.value);
+                if (deleteTarget?.type === 'item') deleteItem(deleteTarget.value);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

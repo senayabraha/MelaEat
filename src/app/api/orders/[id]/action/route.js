@@ -147,6 +147,9 @@ export async function POST(request, { params }) {
       if (driver.driver_approval_status && driver.driver_approval_status !== 'approved') {
         return NextResponse.json({ error: 'Driver is not approved yet.' }, { status: 400 });
       }
+      if (driver.driver_status !== 'online') {
+        return NextResponse.json({ error: 'Driver must be online before assignment.' }, { status: 400 });
+      }
 
       patch = { driver_email: driver.email, driver_name: driver.full_name };
     } else if (action === 'customer_cancel') {
@@ -204,14 +207,24 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Unsupported order action.' }, { status: 400 });
     }
 
-    const { data: updatedOrder, error: updateError } = await admin
+    let updateQuery = admin
       .from('orders')
       .update({ ...patch, updated_date: new Date().toISOString() })
       .eq('id', id)
-      .select()
-      .single();
+      .eq('status', order.status);
 
-    if (updateError) throw updateError;
+    updateQuery = order.driver_email
+      ? updateQuery.eq('driver_email', order.driver_email)
+      : updateQuery.is('driver_email', null);
+
+    const { data: updatedOrder, error: updateError } = await updateQuery.select().single();
+
+    if (updateError) {
+      if (updateError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'This order changed before your update. Please refresh and try again.' }, { status: 409 });
+      }
+      throw updateError;
+    }
 
     writeOrderEvent(
       admin,

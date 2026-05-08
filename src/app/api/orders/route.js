@@ -15,6 +15,30 @@ const generateOrderNumber = () => {
 
 const asNumber = (value) => Number(value || 0);
 
+const isRestaurantOpenNow = (restaurant) => {
+  if (!restaurant) return false;
+  if (restaurant.is_open_manual === false) return false;
+  const hours = restaurant.operating_hours;
+  if (!hours || typeof hours !== 'object') return true;
+
+  const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const now = new Date();
+  const today = hours[dayKeys[now.getDay()]];
+  if (!today || today.closed) return false;
+
+  const open = today.open || '00:00';
+  const close = today.close || '23:59';
+  const [openHours, openMinutes] = open.split(':').map(Number);
+  const [closeHours, closeMinutes] = close.split(':').map(Number);
+  const openAt = openHours * 60 + openMinutes;
+  const closeAt = closeHours * 60 + closeMinutes;
+  const minutesNow = now.getHours() * 60 + now.getMinutes();
+
+  if (!Number.isFinite(openAt) || !Number.isFinite(closeAt)) return true;
+  if (closeAt < openAt) return minutesNow >= openAt || minutesNow <= closeAt;
+  return minutesNow >= openAt && minutesNow <= closeAt;
+};
+
 const getChoicePrice = (menuItem, selectedOption) => {
   const groups = menuItem.options || [];
   const group = groups.find((g) => g.group_name === selectedOption.group_name);
@@ -128,6 +152,9 @@ export async function POST(request) {
     if (restaurant.is_open_manual === false) {
       return NextResponse.json({ error: 'This restaurant is currently paused.' }, { status: 400 });
     }
+    if (!body.is_scheduled && !isRestaurantOpenNow(restaurant)) {
+      return NextResponse.json({ error: 'This restaurant is closed right now.' }, { status: 400 });
+    }
 
     const menuItemIds = [...new Set(cartItems.map((item) => item.menu_item_id).filter(Boolean))];
     const { data: menuItems, error: menuError } = await admin
@@ -162,6 +189,17 @@ export async function POST(request) {
     }
 
     const paymentMethod = ['cash', 'telebirr', 'card'].includes(body.payment_method) ? body.payment_method : 'cash';
+    const isScheduled = Boolean(body.is_scheduled);
+    const scheduledFor = isScheduled ? new Date(body.scheduled_for) : null;
+    if (isScheduled) {
+      if (!scheduledFor || Number.isNaN(scheduledFor.getTime())) {
+        return NextResponse.json({ error: 'A valid scheduled delivery time is required.' }, { status: 400 });
+      }
+      const minimumLeadTime = Date.now() + 30 * 60 * 1000;
+      if (scheduledFor.getTime() < minimumLeadTime) {
+        return NextResponse.json({ error: 'Scheduled orders must be at least 30 minutes from now.' }, { status: 400 });
+      }
+    }
     const priced = applyPromotion(promotion, subtotal, asNumber(restaurant.delivery_fee));
     const total = Math.max(0, subtotal + priced.delivery_fee - priced.discount);
     const now = new Date().toISOString();
@@ -180,13 +218,13 @@ export async function POST(request) {
       total,
       promo_code: priced.promo_code,
       payment_method: paymentMethod,
-      payment_status: paymentMethod === 'cash' ? 'cash_on_delivery' : 'paid',
+      payment_status: paymentMethod === 'cash' ? 'cash_on_delivery' : 'pending',
       delivery_lat: body.delivery_lat,
       delivery_lng: body.delivery_lng,
       delivery_address_text: String(body.delivery_address_text || '').trim(),
       delivery_notes: String(body.delivery_notes || '').slice(0, 500),
-      is_scheduled: Boolean(body.is_scheduled),
-      scheduled_for: body.is_scheduled ? body.scheduled_for : null,
+      is_scheduled: isScheduled,
+      scheduled_for: isScheduled ? scheduledFor.toISOString() : null,
       status: 'accepted',
       accepted_at: now,
       updated_date: now,

@@ -17,7 +17,7 @@ export default function CustomerLayout() {
           <div className="flex gap-6 text-sm text-muted-foreground">
             <Link to="/signup/restaurant" className="hover:text-foreground">For Restaurants</Link>
             <Link to="/signup/driver" className="hover:text-foreground">For Drivers</Link>
-            <a href="#" className="hover:text-foreground">Support</a>
+            <Link to="/orders" className="hover:text-foreground">Support</Link>
           </div>
         </div>
       </footer>

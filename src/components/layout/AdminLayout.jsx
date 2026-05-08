@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Store, Users, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Store, Users, ClipboardList, LogOut } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardMobileNav from './DashboardMobileNav';
@@ -23,7 +23,13 @@ export default function AdminLayout() {
     }).catch(() => base44.auth.redirectToLogin(window.location.href, 'admin'));
   }, [navigate]);
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -31,7 +37,10 @@ export default function AdminLayout() {
       <main className="flex-1 min-w-0 pb-20 lg:pb-0">
         <Outlet context={{ user }} />
       </main>
-      <DashboardMobileNav items={ITEMS} />
+      <DashboardMobileNav items={[
+        ...ITEMS,
+        { label: 'Logout', icon: LogOut, action: () => navigate('/logout/admin') },
+      ]} />
     </div>
   );
 }

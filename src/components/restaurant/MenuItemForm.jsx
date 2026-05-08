@@ -8,10 +8,12 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { base44 } from '@/api/base44Client';
 import { Upload } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function MenuItemForm({ open, onClose, onSave, item, categories, restaurantId }) {
   const [form, setForm] = useState({});
   const [uploading, setUploading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (open) {
@@ -23,9 +25,14 @@ export default function MenuItemForm({ open, onClose, onSave, item, categories, 
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    setForm({ ...form, image_url: file_url });
-    setUploading(false);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setForm({ ...form, image_url: file_url });
+    } catch (error) {
+      toast({ title: 'Upload failed', description: error.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const submit = async () => {

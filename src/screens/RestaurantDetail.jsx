@@ -6,6 +6,16 @@ import { Star, Clock, MapPin, Bike, Heart } from 'lucide-react';
 import MenuItemCard from '@/components/customer/MenuItemCard';
 import ItemDetailDialog from '@/components/customer/ItemDetailDialog';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useCart } from '@/lib/cart';
 import { formatETB, isOpenNow } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
@@ -15,7 +25,8 @@ export default function RestaurantDetail() {
   const [activeItem, setActiveItem] = useState(null);
   const [user, setUser] = useState(null);
   const [activeCategory, setActiveCategory] = useState(null);
-  const { addItem, itemCount, subtotal } = useCart();
+  const [pendingAdd, setPendingAdd] = useState(null);
+  const { cart, addItem, itemCount, subtotal } = useCart();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -72,9 +83,30 @@ export default function RestaurantDetail() {
 
   const handleConfirmAdd = ({ quantity, notes, selected_options }) => {
     const ok = addItem(restaurant, activeItem, quantity, selected_options, notes);
+    if (ok === 'different_restaurant') {
+      setPendingAdd({ item: activeItem, quantity, notes, selected_options });
+      return;
+    }
     if (ok) {
       toast({ title: 'Added to cart', description: activeItem.name });
     }
+    setActiveItem(null);
+  };
+
+  const replaceCartAndAdd = () => {
+    if (!pendingAdd) return;
+    const ok = addItem(
+      restaurant,
+      pendingAdd.item,
+      pendingAdd.quantity,
+      pendingAdd.selected_options,
+      pendingAdd.notes,
+      { replaceExisting: true }
+    );
+    if (ok) {
+      toast({ title: 'Cart updated', description: pendingAdd.item.name });
+    }
+    setPendingAdd(null);
     setActiveItem(null);
   };
 
@@ -208,6 +240,21 @@ export default function RestaurantDetail() {
         onClose={() => setActiveItem(null)}
         onAdd={handleConfirmAdd}
       />
+
+      <AlertDialog open={!!pendingAdd} onOpenChange={(open) => !open && setPendingAdd(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace your cart?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Your cart has items from {cart.restaurant_name}. Clear it to order from {restaurant.name}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep cart</AlertDialogCancel>
+            <AlertDialogAction onClick={replaceCartAndAdd}>Replace cart</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

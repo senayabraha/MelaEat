@@ -34,7 +34,25 @@ export function generateOrderNumber() {
 export function isOpenNow(restaurant) {
   if (!restaurant) return false;
   if (restaurant.is_open_manual === false) return false;
-  return true;
+  const hours = restaurant.operating_hours;
+  if (!hours || typeof hours !== 'object') return true;
+
+  const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const now = new Date();
+  const today = hours[dayKeys[now.getDay()]];
+  if (!today || today.closed) return false;
+
+  const open = today.open || '00:00';
+  const close = today.close || '23:59';
+  const minutesNow = now.getHours() * 60 + now.getMinutes();
+  const [openHours, openMinutes] = open.split(':').map(Number);
+  const [closeHours, closeMinutes] = close.split(':').map(Number);
+  const openAt = openHours * 60 + openMinutes;
+  const closeAt = closeHours * 60 + closeMinutes;
+
+  if (!Number.isFinite(openAt) || !Number.isFinite(closeAt)) return true;
+  if (closeAt < openAt) return minutesNow >= openAt || minutesNow <= closeAt;
+  return minutesNow >= openAt && minutesNow <= closeAt;
 }
 
 export function statusLabel(status) {

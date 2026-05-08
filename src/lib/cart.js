@@ -29,12 +29,12 @@ export function useCart() {
     };
   }, []);
 
-  const addItem = useCallback((restaurant, item, quantity = 1, selected_options = [], notes = '') => {
+  const addItem = useCallback((restaurant, item, quantity = 1, selected_options = [], notes = '', options = {}) => {
     const current = read();
     let next = current;
     if (current.restaurant_id && current.restaurant_id !== restaurant.id) {
-      if (!confirm(`Your cart has items from ${current.restaurant_name}. Clear it to order from ${restaurant.name}?`)) {
-        return false;
+      if (!options.replaceExisting) {
+        return 'different_restaurant';
       }
       next = { restaurant_id: restaurant.id, restaurant_name: restaurant.name, items: [] };
     } else if (!current.restaurant_id) {

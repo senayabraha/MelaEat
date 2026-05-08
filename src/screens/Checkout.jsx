@@ -221,12 +221,21 @@ export default function Checkout() {
           <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-2">
             {[
               { v: 'cash', label: 'Cash on delivery' },
-              { v: 'telebirr', label: 'Telebirr' },
-              { v: 'card', label: 'Card' },
+              { v: 'telebirr', label: 'Telebirr', disabled: true },
+              { v: 'card', label: 'Card', disabled: true },
             ].map((p) => (
-              <label key={p.v} className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition ${paymentMethod === p.v ? 'border-foreground bg-secondary' : 'border-border'}`}>
-                <RadioGroupItem value={p.v} />
-                <span className="text-sm font-medium">{p.label}</span>
+              <label key={p.v} className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition ${
+                p.disabled
+                  ? 'cursor-not-allowed opacity-55'
+                  : paymentMethod === p.v
+                    ? 'cursor-pointer border-foreground bg-secondary'
+                    : 'cursor-pointer border-border'
+              }`}>
+                <RadioGroupItem value={p.v} disabled={p.disabled} />
+                <span className="text-sm font-medium">
+                  {p.label}
+                  {p.disabled && <span className="ml-2 text-xs text-muted-foreground">Coming soon</span>}
+                </span>
               </label>
             ))}
           </RadioGroup>

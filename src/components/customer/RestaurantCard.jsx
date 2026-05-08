@@ -48,7 +48,7 @@ export default function RestaurantCard({ restaurant }) {
           )}
         </div>
         <p className="text-sm text-muted-foreground line-clamp-1">
-          {(restaurant.cuisines || []).slice(0, 3).join(' · ') || restaurant.description}
+          {(restaurant.cuisines || []).slice(0, 3).join('  |  ') || restaurant.description}
         </p>
         <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
           <span className="flex items-center gap-1">

@@ -56,7 +56,7 @@ export default function MenuItemForm({ open, onClose, onSave, item, categories, 
             <div className="flex items-center gap-3">
               {form.image_url && <img src={form.image_url} alt="" className="w-20 h-20 rounded-lg object-cover" />}
               <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border cursor-pointer hover:bg-secondary text-sm">
-                <Upload className="w-4 h-4" /> {uploading ? 'Uploading…' : 'Upload'}
+                <Upload className="w-4 h-4" /> {uploading ? 'Uploading...' : 'Upload'}
                 <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
               </label>
             </div>

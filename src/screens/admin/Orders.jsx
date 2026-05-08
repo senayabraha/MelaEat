@@ -57,8 +57,8 @@ export default function AdminOrders() {
           <div key={order.id} className="p-4 flex items-center gap-4">
             <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded border ${statusColor(order.status)}`}>{statusLabel(order.status)}</span>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{order.order_number} · {order.restaurant_name}</p>
-              <p className="text-xs text-muted-foreground">{order.customer_name} · {paymentStatusLabel(order.payment_status)} · {formatDate(order.created_date)}</p>
+              <p className="font-medium text-sm truncate">{order.order_number}  |  {order.restaurant_name}</p>
+              <p className="text-xs text-muted-foreground">{order.customer_name}  |  {paymentStatusLabel(order.payment_status)}  |  {formatDate(order.created_date)}</p>
             </div>
             <p className="font-medium">{formatETB(order.total)}</p>
           </div>

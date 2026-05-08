@@ -60,7 +60,7 @@ export default function AdminRestaurants() {
           <div key={r.id} className="p-4 flex items-center gap-4">
             <div className="flex-1 min-w-0">
               <p className="font-medium truncate">{r.name}</p>
-              <p className="text-xs text-muted-foreground">{r.owner_email} · {r.city}</p>
+              <p className="text-xs text-muted-foreground">{r.owner_email}  |  {r.city}</p>
             </div>
             <Select value={r.status} onValueChange={(v) => updateStatus(r, v)}>
               <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>

@@ -48,7 +48,7 @@ export default function Cart() {
               </div>
               {(it.selected_options || []).length > 0 && (
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {it.selected_options.map((o) => o.choice_name).join(' · ')}
+                  {it.selected_options.map((o) => o.choice_name).join('  |  ')}
                 </p>
               )}
               {it.notes && <p className="text-xs text-muted-foreground italic mt-1">"{it.notes}"</p>}
@@ -79,7 +79,7 @@ export default function Cart() {
           <span>Calculated at checkout</span>
         </div>
         <Button onClick={() => navigate('/checkout')} className="w-full h-12 rounded-full text-base">
-          Continue to checkout · {formatETB(subtotal)}
+          Continue to checkout  |  {formatETB(subtotal)}
         </Button>
       </div>
     </div>

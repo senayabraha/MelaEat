@@ -41,7 +41,7 @@ export default function DriverProfile() {
           <div>
             <p className="font-display text-xl font-semibold">{user.full_name}</p>
             <p className="text-sm text-muted-foreground">{user.email}</p>
-            <p className="text-xs text-muted-foreground mt-1">⭐ {(user.driver_rating || 5).toFixed(1)} · {user.driver_total_deliveries || 0} deliveries</p>
+            <p className="text-xs text-muted-foreground mt-1">* {(user.driver_rating || 5).toFixed(1)}  |  {user.driver_total_deliveries || 0} deliveries</p>
           </div>
         </div>
         <div>
@@ -64,7 +64,7 @@ export default function DriverProfile() {
           <Label className="mb-2 block">License plate</Label>
           <Input value={form.driver_license_plate || ''} onChange={(e) => setForm({ ...form, driver_license_plate: e.target.value })} />
         </div>
-        <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+        <Button onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
       </div>
     </div>
   );

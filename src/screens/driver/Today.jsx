@@ -68,7 +68,7 @@ export default function DriverToday() {
               <div key={o.id} className="py-3 flex justify-between items-center">
                 <div>
                   <p className="font-medium text-sm">{o.order_number}</p>
-                  <p className="text-xs text-muted-foreground">{o.restaurant_name} → {o.customer_name}</p>
+                  <p className="text-xs text-muted-foreground">{o.restaurant_name} to {o.customer_name}</p>
                 </div>
                 <p className="font-medium text-sm">{formatETB(o.delivery_fee || 0)}</p>
               </div>

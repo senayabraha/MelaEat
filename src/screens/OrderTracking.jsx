@@ -79,7 +79,7 @@ export default function OrderTracking() {
   };
 
   if (!order) {
-    return <div className="max-w-2xl mx-auto px-4 py-20 text-center text-muted-foreground">Loading order…</div>;
+    return <div className="max-w-2xl mx-auto px-4 py-20 text-center text-muted-foreground">Loading order...</div>;
   }
 
   const isDelivered = order.status === 'delivered';
@@ -165,7 +165,7 @@ export default function OrderTracking() {
             <div className="space-y-2 text-sm mb-4">
               {order.items.map((it, i) => (
                 <div key={i} className="flex justify-between">
-                  <span className="text-muted-foreground">{it.quantity}× {it.name}</span>
+                  <span className="text-muted-foreground">{it.quantity}x {it.name}</span>
                   <span>{formatETB(it.line_total)}</span>
                 </div>
               ))}
@@ -226,7 +226,7 @@ export default function OrderTracking() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep order</AlertDialogCancel>
-            <AlertDialogAction onClick={cancelOrder}>Cancel order</AlertDialogAction>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={cancelOrder}>Cancel order</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

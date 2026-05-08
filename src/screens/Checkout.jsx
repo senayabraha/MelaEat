@@ -292,7 +292,7 @@ export default function Checkout() {
             onClick={handlePlaceOrder}
             disabled={submitting}
           >
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : `Place order · ${formatETB(total)}`}
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : `Place order  |  ${formatETB(total)}`}
           </Button>
         </section>
       </div>

@@ -35,7 +35,7 @@ export default function MapPicker({ lat, lng, onChange, height = 280 }) {
     <div className="rounded-xl overflow-hidden border border-border" style={{ height }}>
       <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }}>
         <TileLayer
-          attribution='© OpenStreetMap'
+          attribution='(c) OpenStreetMap'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <ClickHandler onPick={onChange} />

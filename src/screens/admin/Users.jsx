@@ -1,8 +1,10 @@
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
 
 export default function AdminUsers() {
   const qc = useQueryClient();
@@ -33,6 +35,15 @@ export default function AdminUsers() {
         </p>
       </div>
       <div className="bg-card border border-border rounded-2xl divide-y divide-border">
+        {users.length === 0 && (
+          <div className="p-6">
+            <p className="font-medium">No users yet.</p>
+            <p className="text-sm text-muted-foreground mt-1">Ask team members to sign up first, then return here to assign roles.</p>
+            <Button asChild className="mt-4">
+              <Link to="/signup">Go to signup</Link>
+            </Button>
+          </div>
+        )}
         {users.map((user) => (
           <div key={user.id} className="p-4 flex items-center gap-4">
             <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold">

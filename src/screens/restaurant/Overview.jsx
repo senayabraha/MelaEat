@@ -79,7 +79,7 @@ export default function RestaurantOverview() {
         <StatCard icon={ClipboardList} label="Today's orders" value={todayOrders.length} />
         <StatCard icon={DollarSign} label="Today's revenue" value={formatETB(todayRevenue)} />
         <StatCard icon={TrendingUp} label="Active now" value={activeOrders.length} highlight />
-        <StatCard icon={Star} label="Rating" value={restaurant.rating?.toFixed(1) || '—'} />
+        <StatCard icon={Star} label="Rating" value={restaurant.rating?.toFixed(1) || '-'} />
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-6">
@@ -91,8 +91,8 @@ export default function RestaurantOverview() {
             {orders.slice(0, 6).map((o) => (
               <div key={o.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                 <div>
-                  <p className="font-medium text-sm">{o.order_number} · {o.customer_name}</p>
-                  <p className="text-xs text-muted-foreground">{o.items.length} items · {o.status}</p>
+                  <p className="font-medium text-sm">{o.order_number}  |  {o.customer_name}</p>
+                  <p className="text-xs text-muted-foreground">{o.items.length} items  |  {o.status}</p>
                 </div>
                 <p className="font-medium text-sm">{formatETB(o.total)}</p>
               </div>

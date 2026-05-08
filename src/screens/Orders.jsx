@@ -63,7 +63,7 @@ export default function Orders() {
                 </div>
                 <h3 className="font-display text-lg font-semibold truncate">{o.restaurant_name}</h3>
                 <p className="text-sm text-muted-foreground truncate">
-                  {o.items.length} item{o.items.length !== 1 ? 's' : ''} · {formatETB(o.total)}
+                  {o.items.length} item{o.items.length !== 1 ? 's' : ''}  |  {formatETB(o.total)}
                 </p>
               </div>
               <div className="flex flex-col gap-2 shrink-0">

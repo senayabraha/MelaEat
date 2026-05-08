@@ -51,7 +51,7 @@ export default function Home() {
               <span className="italic text-primary">delivered with care.</span>
             </h1>
             <p className="mt-6 text-lg text-muted-foreground max-w-xl text-balance">
-              Discover beloved local kitchens and modern favorites — order in minutes, schedule for later, track every step.
+              Discover beloved local kitchens and modern favorites - order in minutes, schedule for later, track every step.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-xl">

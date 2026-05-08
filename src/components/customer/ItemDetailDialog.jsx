@@ -114,7 +114,7 @@ export default function ItemDetailDialog({ item, open, onClose, onAdd }) {
             onClick={() => onAdd({ quantity, notes, selected_options: selectedFlat })}
             className="flex-1 h-11 rounded-full"
           >
-            Add to cart · {formatETB(total)}
+            Add to cart  |  {formatETB(total)}
           </Button>
         </div>
       </DialogContent>

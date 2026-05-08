@@ -152,7 +152,7 @@ export default function DriverActive() {
           {available.map(o => (
             <div key={o.id} className="bg-card border border-border rounded-2xl p-5">
               <p className="font-medium">{o.restaurant_name}</p>
-              <p className="text-sm text-muted-foreground mb-2">→ {o.delivery_address_text || 'Customer location'}</p>
+              <p className="text-sm text-muted-foreground mb-2">to {o.delivery_address_text || 'Customer location'}</p>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{formatETB(o.delivery_fee || 0)}</span>
                 <Button size="sm" onClick={() => accept(o)}>Accept</Button>
@@ -255,7 +255,7 @@ function Stop({ title, name, phone, address, lat, lng }) {
       <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">{title}</p>
       <p className="font-medium mt-1">{name}</p>
       {phone && <p className="text-xs text-muted-foreground">{phone}</p>}
-      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1"><MapPin className="w-3 h-3" /> {address || '—'}</p>
+      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1"><MapPin className="w-3 h-3" /> {address || '-'}</p>
       {mapsUrl && (
         <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary font-medium flex items-center gap-1 mt-1.5">
           Navigate <ExternalLink className="w-3 h-3" />

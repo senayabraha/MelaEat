@@ -27,9 +27,9 @@ export default function DriverHistory() {
                   <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded border ${statusColor(o.status)}`}>{statusLabel(o.status)}</span>
                   <span className="text-xs text-muted-foreground">{formatDate(o.created_date)}</span>
                 </div>
-                <p className="font-medium text-sm truncate">{o.restaurant_name} → {o.customer_name}</p>
+                <p className="font-medium text-sm truncate">{o.restaurant_name} to {o.customer_name}</p>
                 {o.customer_rating_driver && (
-                  <p className="text-xs text-muted-foreground">⭐ {o.customer_rating_driver}/5</p>
+                  <p className="text-xs text-muted-foreground">* {o.customer_rating_driver}/5</p>
                 )}
               </div>
               <p className="font-medium">{formatETB(o.delivery_fee || 0)}</p>

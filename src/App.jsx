@@ -116,10 +116,13 @@ const AuthenticatedApp = () => {
         </Route>
       </Route>
 
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={<Navigate to="/login/customer" replace />} />
       <Route path="/login/:role" element={<Login />} />
+      <Route path="/signup" element={<Navigate to="/signup/customer" replace />} />
       <Route path="/signup/:role" element={<Login />} />
-      <Route path="/reset-password/:role?" element={<Login />} />
+      <Route path="/reset-password" element={<Navigate to="/reset-password/customer" replace />} />
+      <Route path="/reset-password/:role" element={<Login />} />
+      <Route path="/logout" element={<Navigate to="/logout/customer" replace />} />
       <Route path="/logout/:role" element={<Logout />} />
       <Route path="/select-role" element={<RoleSelection />} />
       <Route path="*" element={<PageNotFound />} />

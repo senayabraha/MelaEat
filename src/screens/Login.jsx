@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { base44, isSupabaseConfigured, supabase } from '@/api/base44Client';
@@ -22,14 +24,28 @@ const roleDestinations = {
   admin: '/admin',
 };
 
+const getCallbackOrigin = () => {
+  const isBrowser = typeof window !== 'undefined';
+  const origin = isBrowser ? window.location.origin : '';
+  const isLocalhost = isBrowser && /^https?:\/\/(localhost|127\.0\.0\.1)(:|$|\/)/.test(origin);
+  const configured = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '');
+  if (isLocalhost && configured) return configured;
+  if (origin) return origin;
+  return configured || 'https://mela-eat.vercel.app';
+};
+
 const getResetRedirectUrl = (role) => {
-  const origin = window.location.origin;
-  const isLocalhost = origin.includes('localhost') || origin.startsWith('http://127.0.0.1');
-  const configuredUrl = import.meta.env.VITE_APP_URL || import.meta.env.NEXT_PUBLIC_APP_URL;
-  const productionBase = configuredUrl ? `${configuredUrl}/reset-password` : 'https://mela-eat.vercel.app/reset-password';
-  const baseUrl = isLocalhost ? productionBase : `${origin}/reset-password`;
-  const separator = baseUrl.includes('?') ? '&' : '?';
-  return `${baseUrl}${separator}role=${role}`;
+  return `${getCallbackOrigin()}/reset-password?role=${encodeURIComponent(role)}`;
+};
+
+const getSignupCallbackUrl = (role) => {
+  return `${getCallbackOrigin()}/login/${encodeURIComponent(role)}`;
+};
+
+const deriveModeFromPath = (pathname) => {
+  if (pathname.startsWith('/reset-password')) return 'reset';
+  if (pathname.startsWith('/signup')) return 'signup';
+  return 'signin';
 };
 
 export default function Login() {
@@ -39,17 +55,25 @@ export default function Login() {
   const navigate = useNavigate();
   const requestedRole = params.get('role') || routeRole;
   const selectedRole = allowedRoles.has(requestedRole) ? requestedRole : 'customer';
-  const hashParams = useMemo(() => new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash), [location.hash]);
+  const hashParams = useMemo(
+    () => new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash),
+    [location.hash]
+  );
   const hasRecoveryTokens = Boolean(hashParams.get('access_token') && hashParams.get('refresh_token') && hashParams.get('type') === 'recovery');
   const hasRecoveryCode = Boolean(params.get('code') || params.get('token_hash'));
-  const isRecoveryCallback = hasRecoveryTokens || hasRecoveryCode || location.hash.includes('type=recovery') || params.get('type') === 'recovery';
+  const isRecoveryCallback =
+    hasRecoveryTokens
+    || hasRecoveryCode
+    || location.hash.includes('type=recovery')
+    || params.get('type') === 'recovery';
+
+  const pathMode = deriveModeFromPath(location.pathname);
   const initialMode = isRecoveryCallback
     ? 'update-password'
-    : location.pathname.startsWith('/reset-password') || params.get('mode') === 'reset'
-      ? 'reset'
-      : selectedRole !== 'admin' && (
-        location.pathname.startsWith('/signup') || params.get('mode') === 'signup' || params.get('mode') === 'sign-up'
-      ) ? 'signup' : 'signin';
+    : selectedRole === 'admin' && pathMode === 'signup'
+      ? 'signin'
+      : pathMode;
+
   const [mode, setMode] = useState(initialMode);
   const [fullName, setFullName] = useState('');
   const [restaurantName, setRestaurantName] = useState('');
@@ -64,11 +88,20 @@ export default function Login() {
   const isSignupAllowed = selectedRole !== 'admin';
   const isPasswordMode = mode === 'signin' || mode === 'signup' || mode === 'update-password';
 
+  // Keep mode in sync with the URL when the user clicks Sign-up / Sign-in / Reset links.
+  useEffect(() => {
+    if (isRecoveryCallback) return;
+    setMode(deriveModeFromPath(location.pathname) === 'signup' && selectedRole === 'admin' ? 'signin' : deriveModeFromPath(location.pathname));
+    setError('');
+    setMessage('');
+  }, [location.pathname, selectedRole, isRecoveryCallback]);
 
   useEffect(() => {
+    let cancelled = false;
+
     const processRecoveryLink = async () => {
       if (!location.pathname.startsWith('/reset-password')) {
-        setIsProcessingRecovery(false);
+        if (!cancelled) setIsProcessingRecovery(false);
         return;
       }
 
@@ -86,7 +119,7 @@ export default function Login() {
       );
 
       if (!hasRecoveryParams) {
-        setIsProcessingRecovery(false);
+        if (!cancelled) setIsProcessingRecovery(false);
         return;
       }
 
@@ -99,39 +132,39 @@ export default function Login() {
             refresh_token: refreshToken,
           });
           if (sessionError) throw sessionError;
-          setMode('update-password');
-          return;
-        }
-
-        if (code) {
+        } else if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
-          setMode('update-password');
-          return;
-        }
-
-        if (tokenHash && type === 'recovery') {
+        } else if (tokenHash && type === 'recovery') {
           const { error: verifyError } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
             type: 'recovery',
           });
           if (verifyError) throw verifyError;
-          setMode('update-password');
-        } else if (location.hash.includes('type=recovery')) {
-          setMode('update-password');
         }
 
-        window.history.replaceState({}, document.title, '/reset-password');
+        if (cancelled) return;
+        setMode('update-password');
+        // Strip recovery params from URL but keep the role for nicer UX.
+        const cleanUrl = `/reset-password${selectedRole ? `?role=${encodeURIComponent(selectedRole)}` : ''}`;
+        window.history.replaceState({}, document.title, cleanUrl);
       } catch (recoveryError) {
+        if (cancelled) return;
         setError(recoveryError.message || 'Recovery link is invalid or expired. Request a new reset email.');
         setMode('reset');
       } finally {
-        setIsProcessingRecovery(false);
+        if (!cancelled) setIsProcessingRecovery(false);
       }
     };
 
     processRecoveryLink();
-  }, [hashParams, location.hash, location.pathname, params]);
+
+    return () => {
+      cancelled = true;
+    };
+    // hashParams/params identities change every render; key on their string forms.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, location.hash, params.toString(), hashParams.toString(), selectedRole]);
 
   const redirectTo = useMemo(() => {
     const target = params.get('redirect');
@@ -139,7 +172,7 @@ export default function Login() {
 
     try {
       const decoded = decodeURIComponent(target);
-      if (decoded.startsWith(window.location.origin)) {
+      if (typeof window !== 'undefined' && decoded.startsWith(window.location.origin)) {
         return decoded.replace(window.location.origin, '') || '/';
       }
       if (decoded.startsWith('/')) return decoded;
@@ -161,11 +194,15 @@ export default function Login() {
       role = updated.role;
     }
 
-    if (role !== selectedRole) {
-      await supabase.auth.signOut();
-      throw new Error(
-        `This account is registered as a ${roleLabels[role] || role}. Please use the ${roleLabels[role] || role} login page.`
-      );
+    if (role !== selectedRole && !(selectedRole === 'customer' && role === 'admin')) {
+      // Allow admins to sign in via any role-tab and route them to admin dashboard,
+      // but block role mismatch for everyone else.
+      if (role !== 'admin') {
+        await supabase.auth.signOut();
+        throw new Error(
+          `This account is registered as a ${roleLabels[role] || role}. Please use the ${roleLabels[role] || role} login page.`
+        );
+      }
     }
 
     if (role === 'restaurant' && !currentUser.restaurant_id) {
@@ -189,7 +226,8 @@ export default function Login() {
       }
 
       if (mode === 'reset') {
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        if (!email.trim()) throw new Error('Enter the email address for your account.');
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
           redirectTo: getResetRedirectUrl(selectedRole),
         });
 
@@ -209,16 +247,18 @@ export default function Login() {
 
         const { error: updateError } = await supabase.auth.updateUser({ password });
         if (updateError) throw updateError;
-        setMessage('Password updated. You can now sign in.');
+        setMessage('Password updated. Redirecting you to sign in...');
         setPassword('');
         setConfirmPassword('');
-        setMode('signin');
+        // Sign out so they re-enter credentials with the new password.
+        await supabase.auth.signOut();
+        setTimeout(() => navigate(`/login/${selectedRole}`, { replace: true }), 800);
         return;
       }
 
       if (mode === 'signin') {
         const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim(),
           password,
         });
 
@@ -227,8 +267,17 @@ export default function Login() {
         return;
       }
 
+      // signup
       if (!isSignupAllowed) {
         throw new Error('Admin accounts cannot be created from this page.');
+      }
+
+      if (!fullName.trim()) {
+        throw new Error('Enter your full name.');
+      }
+
+      if (selectedRole === 'restaurant' && !restaurantName.trim()) {
+        throw new Error('Enter your restaurant name.');
       }
 
       if (password.length < 6) {
@@ -240,9 +289,10 @@ export default function Login() {
       }
 
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
+          emailRedirectTo: getSignupCallbackUrl(selectedRole),
           data: {
             full_name: fullName.trim(),
             role: selectedRole,
@@ -258,7 +308,7 @@ export default function Login() {
         return;
       }
 
-      setMode('signin');
+      navigate(`/login/${selectedRole}`, { replace: true });
       setPassword('');
       setConfirmPassword('');
       setMessage(`Account created for ${roleLabels[selectedRole]}. Check your email to confirm your address, then sign in.`);
@@ -270,6 +320,18 @@ export default function Login() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const switchMode = (nextMode) => {
+    setError('');
+    setMessage('');
+    if (nextMode === 'signup') {
+      navigate(`/signup/${selectedRole}`, { replace: false });
+    } else if (nextMode === 'signin') {
+      navigate(`/login/${selectedRole}`, { replace: false });
+    } else if (nextMode === 'reset') {
+      navigate(`/reset-password/${selectedRole}`, { replace: false });
     }
   };
 
@@ -309,6 +371,7 @@ export default function Login() {
                     onChange={(event) => setFullName(event.target.value)}
                     placeholder="Senay Abraha"
                     required
+                    autoComplete="name"
                   />
                 </div>
                 {selectedRole === 'restaurant' && (
@@ -319,6 +382,7 @@ export default function Login() {
                       onChange={(event) => setRestaurantName(event.target.value)}
                       placeholder="MelaEat Kitchen"
                       required
+                      autoComplete="organization"
                     />
                   </div>
                 )}
@@ -333,6 +397,7 @@ export default function Login() {
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="you@example.com"
                   required
+                  autoComplete="email"
                 />
               </div>
             )}
@@ -345,6 +410,8 @@ export default function Login() {
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="At least 6 characters"
                   required
+                  minLength={6}
+                  autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                 />
               </div>
             )}
@@ -357,11 +424,13 @@ export default function Login() {
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="Repeat your password"
                   required
+                  minLength={6}
+                  autoComplete="new-password"
                 />
               </div>
             )}
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            {message && <p className="text-sm text-muted-foreground">{message}</p>}
+            {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+            {message && <p className="text-sm text-muted-foreground" role="status">{message}</p>}
             <Button type="submit" className="w-full" disabled={loading || isProcessingRecovery}>
               {loading
                 ? mode === 'signin'
@@ -383,33 +452,68 @@ export default function Login() {
             </Button>
           </form>
 
-          {mode !== 'update-password' && isSignupAllowed && (
+          {mode !== 'update-password' && mode !== 'reset' && isSignupAllowed && (
             <p className="mt-4 text-sm text-muted-foreground">
               {mode === 'signin' ? "Don't have an account yet?" : 'Already have an account?'}{' '}
               <button
                 type="button"
                 className="font-medium text-primary hover:underline"
-                onClick={() => {
-                  setMode(mode === 'signin' ? 'signup' : 'signin');
-                  setError('');
-                  setMessage('');
-                }}
+                onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
               >
                 {mode === 'signin' ? 'Create one' : 'Sign in'}
               </button>
             </p>
           )}
 
+          {mode === 'reset' && (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Remembered it?{' '}
+              <button
+                type="button"
+                className="font-medium text-primary hover:underline"
+                onClick={() => switchMode('signin')}
+              >
+                Back to sign in
+              </button>
+            </p>
+          )}
+
           {mode === 'signin' && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Forgot password? <Link className="text-primary hover:underline" to={`/reset-password/${selectedRole}`}>Reset it</Link>
+              Forgot password?{' '}
+              <Link className="text-primary hover:underline" to={`/reset-password/${selectedRole}`}>
+                Reset it
+              </Link>
             </p>
           )}
 
           {mode === 'signin' && isSignupAllowed && (
             <p className="mt-2 text-xs text-muted-foreground">
-              New here? <Link className="text-primary hover:underline" to={`/signup/${selectedRole}`}>Start with sign up</Link>
+              New here?{' '}
+              <Link className="text-primary hover:underline" to={`/signup/${selectedRole}`}>
+                Start with sign up
+              </Link>
             </p>
+          )}
+
+          {/* Role switcher so users on the wrong page can move without typing the URL. */}
+          {(mode === 'signin' || mode === 'signup') && (
+            <div className="mt-6 pt-4 border-t border-border">
+              <p className="text-xs text-muted-foreground mb-2">Looking for a different account type?</p>
+              <div className="flex flex-wrap gap-2">
+                {['customer', 'restaurant', 'driver']
+                  .filter((r) => r !== selectedRole)
+                  .map((r) => (
+                    <Link
+                      key={r}
+                      to={`/${mode === 'signup' ? 'signup' : 'login'}/${r}`}
+                      className="text-xs px-3 py-1.5 rounded-full border border-border hover:bg-secondary transition-colors capitalize"
+                    >
+                      {roleLabels[r]}
+                    </Link>
+                  ))}
+              </div>
+            </div>
           )}
         </div>
       </div>

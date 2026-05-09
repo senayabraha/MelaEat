@@ -90,8 +90,8 @@ export const AuthProvider = ({ children }) => {
     };
   }, [checkUserAuth]);
 
-  const logout = () => base44.auth.logout();
-  const navigateToLogin = () => base44.auth.redirectToLogin(window.location.href);
+  const logout = () => base44.auth.logout(user?.role);
+  const navigateToLogin = () => base44.auth.redirectToLogin(window.location.href, user?.role);
 
   return (
     <AuthContext.Provider value={{

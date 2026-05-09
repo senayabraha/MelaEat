@@ -71,11 +71,14 @@ const ensureProfile = async (authUser) => {
   if (error) throw error;
   if (profile) return mapAuthUser(authUser, profile);
 
+  // Always insert with role='user'. The role is finalised by the server-side
+  // /api/profile/complete-role endpoint (admin-only validation, no client trust).
+  // This blocks privilege escalation via crafted user_metadata.role values.
   const payload = {
     id: authUser.id,
     email: authUser.email,
     full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
-    role: authUser.user_metadata?.role || 'customer',
+    role: 'user',
   };
   const { data, error: insertError } = await supabase
     .from('profiles')
@@ -100,6 +103,11 @@ const getMappedUser = async (authUser) => {
   currentUserPromise = ensureProfile(authUser)
     .then((mappedUser) => {
       currentUserCache = mappedUser;
+      try {
+        if (typeof window !== 'undefined' && mappedUser?.role && mappedUser.role !== 'user') {
+          window.localStorage?.setItem('melaeat:lastRole', mappedUser.role);
+        }
+      } catch {}
       return mappedUser;
     })
     .finally(() => {
@@ -316,16 +324,23 @@ export const base44 = {
       return currentUserCache;
     },
 
-    redirectToLogin(returnTo = window.location.href, role = 'customer') {
-      const loginRole = ['customer', 'restaurant', 'driver', 'admin'].includes(role) ? role : 'customer';
+    redirectToLogin(returnTo = window.location.href, role) {
+      const stored = typeof window !== 'undefined' ? window.localStorage?.getItem('melaeat:lastRole') : null;
+      const cachedRole = currentUserCache?.role;
+      const candidate = role || cachedRole || stored || 'customer';
+      const loginRole = ['customer', 'restaurant', 'driver', 'admin'].includes(candidate) ? candidate : 'customer';
       const redirect = encodeURIComponent(returnTo);
       window.location.href = `/login/${loginRole}?redirect=${redirect}`;
     },
 
-    async logout(role = 'customer') {
-      const loginRole = ['customer', 'restaurant', 'driver', 'admin'].includes(role) ? role : 'customer';
+    async logout(role) {
+      const stored = typeof window !== 'undefined' ? window.localStorage?.getItem('melaeat:lastRole') : null;
+      const cachedRole = currentUserCache?.role;
+      const candidate = role || cachedRole || stored || 'customer';
+      const loginRole = ['customer', 'restaurant', 'driver', 'admin'].includes(candidate) ? candidate : 'customer';
       await supabase.auth.signOut();
       clearAuthCache();
+      try { window.localStorage?.removeItem('melaeat:lastRole'); } catch {}
       window.location.href = `/login/${loginRole}`;
     },
   },

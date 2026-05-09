@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Switch } from '@/components/ui/switch';
 import { ClipboardList, DollarSign, Star, TrendingUp } from 'lucide-react';
-import { formatETB } from '@/lib/format';
+import { formatETB, statusLabel } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function RestaurantOverview() {
@@ -13,11 +13,15 @@ export default function RestaurantOverview() {
   const { toast } = useToast();
 
   const loadRestaurant = async () => {
-    let res = await base44.entities.Restaurant.filter({ owner_email: user.email });
-    if (res.length === 0 && user.restaurant_id) {
-      res = [await base44.entities.Restaurant.get(user.restaurant_id)];
+    try {
+      let res = await base44.entities.Restaurant.filter({ owner_email: user.email });
+      if (res.length === 0 && user.restaurant_id) {
+        res = [await base44.entities.Restaurant.get(user.restaurant_id)];
+      }
+      setRestaurant(res[0] || null);
+    } catch (error) {
+      toast({ title: 'Could not load restaurant', description: error.message || 'Please refresh the page.', variant: 'destructive' });
     }
-    setRestaurant(res[0] || null);
   };
 
   useEffect(() => { loadRestaurant(); }, [user.email]);
@@ -92,7 +96,7 @@ export default function RestaurantOverview() {
               <div key={o.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                 <div>
                   <p className="font-medium text-sm">{o.order_number}  |  {o.customer_name}</p>
-                  <p className="text-xs text-muted-foreground">{o.items.length} items  |  {o.status}</p>
+                  <p className="text-xs text-muted-foreground">{o.items.length} items  |  {statusLabel(o.status)}</p>
                 </div>
                 <p className="font-medium text-sm">{formatETB(o.total)}</p>
               </div>

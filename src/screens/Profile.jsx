@@ -34,6 +34,8 @@ export default function Profile() {
       });
       await checkUserAuth();
       toast({ title: 'Profile updated' });
+    } catch (error) {
+      toast({ title: 'Could not save profile', description: error.message || 'Please try again.', variant: 'destructive' });
     } finally {
       setSaving(false);
     }

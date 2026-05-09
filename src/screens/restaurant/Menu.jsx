@@ -57,32 +57,52 @@ export default function RestaurantMenu() {
 
   const addCategory = async () => {
     if (!newCategory.trim()) return;
-    await base44.entities.MenuCategory.create({ restaurant_id: restaurant.id, name: newCategory.trim(), sort_order: categories.length });
-    setNewCategory('');
-    refresh();
+    try {
+      await base44.entities.MenuCategory.create({ restaurant_id: restaurant.id, name: newCategory.trim(), sort_order: categories.length });
+      setNewCategory('');
+      refresh();
+    } catch (error) {
+      toast({ title: 'Could not add category', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
   const deleteCategory = async (c) => {
-    const its = items.filter(i => i.category_id === c.id);
-    await Promise.all(its.map(i => base44.entities.MenuItem.delete(i.id)));
-    await base44.entities.MenuCategory.delete(c.id);
-    setDeleteTarget(null);
-    refresh();
+    try {
+      const its = items.filter(i => i.category_id === c.id);
+      await Promise.all(its.map(i => base44.entities.MenuItem.delete(i.id)));
+      await base44.entities.MenuCategory.delete(c.id);
+      setDeleteTarget(null);
+      refresh();
+    } catch (error) {
+      toast({ title: 'Could not delete category', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
   const toggleStock = async (it) => {
-    await base44.entities.MenuItem.update(it.id, { in_stock: !it.in_stock });
-    refresh();
-    toast({ title: it.in_stock ? 'Marked out of stock' : 'Marked in stock' });
+    try {
+      await base44.entities.MenuItem.update(it.id, { in_stock: !it.in_stock });
+      refresh();
+      toast({ title: it.in_stock ? 'Marked out of stock' : 'Marked in stock' });
+    } catch (error) {
+      toast({ title: 'Could not update stock', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
   const setCategoryStock = async (categoryId, inStock) => {
-    const cItems = items.filter(i => i.category_id === categoryId);
-    await Promise.all(cItems.map((it) => base44.entities.MenuItem.update(it.id, { in_stock: inStock })));
-    refresh();
-    toast({ title: inStock ? 'Category marked in stock' : 'Category marked out of stock' });
+    try {
+      const cItems = items.filter(i => i.category_id === categoryId);
+      await Promise.all(cItems.map((it) => base44.entities.MenuItem.update(it.id, { in_stock: inStock })));
+      refresh();
+      toast({ title: inStock ? 'Category marked in stock' : 'Category marked out of stock' });
+    } catch (error) {
+      toast({ title: 'Could not update category stock', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
   const deleteItem = async (it) => {
-    await base44.entities.MenuItem.delete(it.id);
-    setDeleteTarget(null);
-    refresh();
+    try {
+      await base44.entities.MenuItem.delete(it.id);
+      setDeleteTarget(null);
+      refresh();
+    } catch (error) {
+      toast({ title: 'Could not delete item', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
 
   if (!restaurant) return null;

@@ -149,13 +149,23 @@ export default function DriverActive() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {available.map(o => (
-            <div key={o.id} className="bg-card border border-border rounded-2xl p-5">
-              <p className="font-medium">{o.restaurant_name}</p>
-              <p className="text-sm text-muted-foreground mb-2">to {o.delivery_address_text || 'Customer location'}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{formatETB(o.delivery_fee || 0)}</span>
-                <Button size="sm" onClick={() => accept(o)}>Accept</Button>
+            <div key={o.id} className="bg-card border border-border rounded-2xl p-5 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold">{o.restaurant_name}</p>
+                  <p className="text-xs text-muted-foreground">{o.order_number}</p>
+                </div>
+                <span className="text-base font-bold text-primary shrink-0">{formatETB(o.delivery_fee || 0)}</span>
               </div>
+              <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <span>{o.delivery_address_text || 'Customer location'}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{(o.items || []).length} item{(o.items || []).length !== 1 ? 's' : ''} &middot; {o.payment_method === 'cash' ? 'Cash' : 'Paid'}</span>
+                <span className="font-medium text-foreground">{formatETB(o.total || 0)} total</span>
+              </div>
+              <Button size="sm" className="w-full" onClick={() => accept(o)}>Accept delivery</Button>
             </div>
           ))}
         </div>

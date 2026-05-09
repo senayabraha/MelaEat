@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function RestaurantProfile() {
   const { user } = useOutletContext();
+  const { checkUserAuth } = useAuth();
   const [form, setForm] = useState({
     full_name: '',
     phone: '',
@@ -29,7 +31,10 @@ export default function RestaurantProfile() {
         full_name: form.full_name.trim(),
         phone: form.phone,
       });
+      await checkUserAuth();
       toast({ title: 'Profile saved' });
+    } catch (error) {
+      toast({ title: 'Could not save profile', description: error.message || 'Please try again.', variant: 'destructive' });
     } finally {
       setSaving(false);
     }

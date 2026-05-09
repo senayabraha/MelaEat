@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Search, ArrowRight, MapPin, Store, Bike } from 'lucide-react';
+import { Search, ArrowRight, MapPin, Store, Bike, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import RestaurantCard from '@/components/customer/RestaurantCard';
 import CuisineFilter from '@/components/customer/CuisineFilter';
 import { Link } from 'react-router-dom';
@@ -11,7 +12,7 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [cuisine, setCuisine] = useState('all');
 
-  const { data: restaurants = [], isLoading } = useQuery({
+  const { data: restaurants = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['restaurants'],
     queryFn: () => base44.entities.Restaurant.filter({ status: 'approved' }, '-is_featured', 100),
   });
@@ -29,9 +30,11 @@ export default function Home() {
 
   const featured = filtered.filter((r) => r.is_featured).slice(0, 3);
   const all = filtered.filter((r) => !featured.includes(r));
-  const openCount = restaurants.filter((r) => r.is_open_manual !== false).length;
-  const averageFee = restaurants.length
-    ? Math.round(restaurants.reduce((sum, r) => sum + (r.delivery_fee || 0), 0) / restaurants.length)
+
+  // Stats reflect currently visible restaurants so numbers match what the user sees
+  const openCount = filtered.filter((r) => r.is_open_manual !== false).length;
+  const averageFee = filtered.length
+    ? Math.round(filtered.reduce((sum, r) => sum + (r.delivery_fee || 0), 0) / filtered.length)
     : 0;
 
   return (
@@ -46,7 +49,7 @@ export default function Home() {
               Now serving Addis Ababa & beyond
             </div>
             <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.05] tracking-tight text-balance">
-              Ethiopia's finest,
+              Ethiopia&apos;s finest,
               <br />
               <span className="italic text-primary">delivered with care.</span>
             </h1>
@@ -98,7 +101,14 @@ export default function Home() {
 
       {/* Restaurants */}
       <section id="restaurants" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {isLoading ? (
+        {isError ? (
+          <div className="text-center py-20 space-y-3">
+            <AlertCircle className="w-10 h-10 text-destructive mx-auto" />
+            <p className="font-display text-2xl">Could not load restaurants</p>
+            <p className="text-muted-foreground">Check your connection and try again.</p>
+            <Button variant="outline" onClick={() => refetch()}>Retry</Button>
+          </div>
+        ) : isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-10">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="animate-pulse">

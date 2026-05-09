@@ -94,14 +94,14 @@ export default function RestaurantOrders() {
 
   useEffect(() => {
     if (previousActiveCount.current === null) {
-      previousActiveCount.current = buckets.active.length;
+      previousActiveCount.current = buckets.new.length;
       return;
     }
-    if (buckets.active.length > previousActiveCount.current) {
-      toast({ title: 'New order received', description: 'It is already accepted and ready to prepare.' });
+    if (buckets.new.length > previousActiveCount.current) {
+      toast({ title: 'New order received', description: 'A customer is waiting — accept or reject it now.' });
     }
-    previousActiveCount.current = buckets.active.length;
-  }, [buckets.active.length, toast]);
+    previousActiveCount.current = buckets.new.length;
+  }, [buckets.new.length, toast]);
 
   if (!restaurant) return null;
 

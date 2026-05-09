@@ -88,13 +88,37 @@ export default function Login() {
   const isSignupAllowed = selectedRole !== 'admin';
   const isPasswordMode = mode === 'signin' || mode === 'signup' || mode === 'update-password';
 
+  // Once we land in update-password (after successfully processing recovery),
+  // we stick there regardless of URL/path changes until the user navigates away.
+  const [recoveryHandled, setRecoveryHandled] = useState(false);
+
   // Keep mode in sync with the URL when the user clicks Sign-up / Sign-in / Reset links.
+  // BUT: never overwrite update-password mode (the recovery flow has priority).
   useEffect(() => {
     if (isRecoveryCallback) return;
-    setMode(deriveModeFromPath(location.pathname) === 'signup' && selectedRole === 'admin' ? 'signin' : deriveModeFromPath(location.pathname));
+    if (recoveryHandled) return;
+    if (mode === 'update-password') return;
+    const next = deriveModeFromPath(location.pathname);
+    setMode(next === 'signup' && selectedRole === 'admin' ? 'signin' : next);
     setError('');
     setMessage('');
-  }, [location.pathname, selectedRole, isRecoveryCallback]);
+  }, [location.pathname, selectedRole, isRecoveryCallback, recoveryHandled, mode]);
+
+  // Listen for PASSWORD_RECOVERY events from supabase-js. supabase-js auto-detects
+  // the recovery hash/code on page load (detectSessionInUrl=true by default) and
+  // fires this event once the session is established. This is the most reliable
+  // signal — covers cases where the URL params get consumed before our useEffect runs.
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setMode('update-password');
+        setRecoveryHandled(true);
+        setIsProcessingRecovery(false);
+        setError('');
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +132,8 @@ export default function Login() {
       const code = params.get('code');
       const tokenHash = params.get('token_hash');
       const type = params.get('type');
+      const errorCode = params.get('error_code') || hashParams.get('error_code');
+      const errorDescription = params.get('error_description') || hashParams.get('error_description');
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
       const hashType = hashParams.get('type');
@@ -118,8 +144,23 @@ export default function Login() {
         || location.hash.includes('type=recovery')
       );
 
+      // Surface Supabase-side errors (expired link, used link, etc.) instead of
+      // silently dropping the user back on the email-entry form.
+      if (errorCode || errorDescription) {
+        if (cancelled) return;
+        setError(decodeURIComponent(errorDescription || 'Recovery link is invalid or expired. Request a new reset email.').replace(/\+/g, ' '));
+        setMode('reset');
+        setIsProcessingRecovery(false);
+        // Strip the error params from the URL so a refresh doesn't re-show the error.
+        window.history.replaceState({}, document.title, `/reset-password?role=${encodeURIComponent(selectedRole)}`);
+        return;
+      }
+
       if (!hasRecoveryParams) {
-        if (!cancelled) setIsProcessingRecovery(false);
+        // If supabase-js already auto-consumed the hash, an active session +
+        // PASSWORD_RECOVERY event will set update-password via the listener above.
+        // Otherwise, drop into reset-request mode.
+        if (!cancelled && !recoveryHandled) setIsProcessingRecovery(false);
         return;
       }
 
@@ -145,8 +186,8 @@ export default function Login() {
 
         if (cancelled) return;
         setMode('update-password');
-        // Strip recovery params from URL but keep the role for nicer UX.
-        const cleanUrl = `/reset-password${selectedRole ? `?role=${encodeURIComponent(selectedRole)}` : ''}`;
+        setRecoveryHandled(true);
+        const cleanUrl = `/reset-password?role=${encodeURIComponent(selectedRole)}`;
         window.history.replaceState({}, document.title, cleanUrl);
       } catch (recoveryError) {
         if (cancelled) return;
@@ -162,7 +203,6 @@ export default function Login() {
     return () => {
       cancelled = true;
     };
-    // hashParams/params identities change every render; key on their string forms.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, location.hash, params.toString(), hashParams.toString(), selectedRole]);
 
@@ -334,6 +374,25 @@ export default function Login() {
       navigate(`/reset-password/${selectedRole}`, { replace: false });
     }
   };
+
+  // While the recovery callback is being processed, render a dedicated screen
+  // so the user never sees the email-entry form flash before the new-password form.
+  if (isProcessingRecovery) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-sm text-center">
+          <div className="flex justify-center mb-8">
+            <Logo />
+          </div>
+          <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+            <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+            <h1 className="font-display text-xl font-semibold mb-2">Validating recovery link...</h1>
+            <p className="text-sm text-muted-foreground">Hold on while we verify your password reset request.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">

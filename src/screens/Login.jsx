@@ -39,7 +39,9 @@ export default function Login() {
   const navigate = useNavigate();
   const requestedRole = params.get('role') || routeRole;
   const selectedRole = allowedRoles.has(requestedRole) ? requestedRole : 'customer';
-  const isRecoveryCallback = location.hash.includes('type=recovery') || params.get('type') === 'recovery';
+  const hashParams = useMemo(() => new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash), [location.hash]);
+  const hasRecoveryTokens = Boolean(hashParams.get('access_token') && hashParams.get('refresh_token') && hashParams.get('type') === 'recovery');
+  const isRecoveryCallback = hasRecoveryTokens || location.hash.includes('type=recovery') || params.get('type') === 'recovery';
   const initialMode = isRecoveryCallback
     ? 'update-password'
     : location.pathname.startsWith('/reset-password') || params.get('mode') === 'reset'
@@ -68,8 +70,21 @@ export default function Login() {
       const code = params.get('code');
       const tokenHash = params.get('token_hash');
       const type = params.get('type');
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      const hashType = hashParams.get('type');
 
       try {
+        if (accessToken && refreshToken && hashType === 'recovery') {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (sessionError) throw sessionError;
+          setMode('update-password');
+          return;
+        }
+
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
@@ -96,7 +111,7 @@ export default function Login() {
     };
 
     processRecoveryLink();
-  }, [location.hash, location.pathname, params]);
+  }, [hashParams, location.pathname, params]);
 
   const redirectTo = useMemo(() => {
     const target = params.get('redirect');

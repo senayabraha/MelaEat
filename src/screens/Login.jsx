@@ -41,7 +41,8 @@ export default function Login() {
   const selectedRole = allowedRoles.has(requestedRole) ? requestedRole : 'customer';
   const hashParams = useMemo(() => new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : location.hash), [location.hash]);
   const hasRecoveryTokens = Boolean(hashParams.get('access_token') && hashParams.get('refresh_token') && hashParams.get('type') === 'recovery');
-  const isRecoveryCallback = hasRecoveryTokens || location.hash.includes('type=recovery') || params.get('type') === 'recovery';
+  const hasRecoveryCode = Boolean(params.get('code') || params.get('token_hash'));
+  const isRecoveryCallback = hasRecoveryTokens || hasRecoveryCode || location.hash.includes('type=recovery') || params.get('type') === 'recovery';
   const initialMode = isRecoveryCallback
     ? 'update-password'
     : location.pathname.startsWith('/reset-password') || params.get('mode') === 'reset'
@@ -56,6 +57,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isProcessingRecovery, setIsProcessingRecovery] = useState(isRecoveryCallback);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const hasRedirect = Boolean(params.get('redirect'));
@@ -65,7 +67,10 @@ export default function Login() {
 
   useEffect(() => {
     const processRecoveryLink = async () => {
-      if (!location.pathname.startsWith('/reset-password')) return;
+      if (!location.pathname.startsWith('/reset-password')) {
+        setIsProcessingRecovery(false);
+        return;
+      }
 
       const code = params.get('code');
       const tokenHash = params.get('token_hash');
@@ -73,14 +78,21 @@ export default function Login() {
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
       const hashType = hashParams.get('type');
+      const hasRecoveryParams = Boolean(
+        (accessToken && refreshToken && hashType === 'recovery')
+        || code
+        || (tokenHash && type === 'recovery')
+        || location.hash.includes('type=recovery')
+      );
+
+      if (!hasRecoveryParams) {
+        setIsProcessingRecovery(false);
+        return;
+      }
+
+      setIsProcessingRecovery(true);
 
       try {
-        const { data: existingSessionData } = await supabase.auth.getSession();
-        if (existingSessionData.session) {
-          setMode('update-password');
-          return;
-        }
-
         if (accessToken && refreshToken && hashType === 'recovery') {
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -105,19 +117,21 @@ export default function Login() {
           });
           if (verifyError) throw verifyError;
           setMode('update-password');
-          return;
-        }
-
-        if (location.hash.includes('type=recovery')) {
+        } else if (location.hash.includes('type=recovery')) {
           setMode('update-password');
         }
+
+        window.history.replaceState({}, document.title, '/reset-password');
       } catch (recoveryError) {
         setError(recoveryError.message || 'Recovery link is invalid or expired. Request a new reset email.');
+        setMode('reset');
+      } finally {
+        setIsProcessingRecovery(false);
       }
     };
 
     processRecoveryLink();
-  }, [hashParams, location.pathname, params]);
+  }, [hashParams, location.hash, location.pathname, params]);
 
   const redirectTo = useMemo(() => {
     const target = params.get('redirect');
@@ -348,7 +362,7 @@ export default function Login() {
             )}
             {error && <p className="text-sm text-destructive">{error}</p>}
             {message && <p className="text-sm text-muted-foreground">{message}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading || isProcessingRecovery}>
               {loading
                 ? mode === 'signin'
                   ? 'Signing in...'
@@ -357,6 +371,8 @@ export default function Login() {
                     : mode === 'update-password'
                       ? 'Updating password...'
                       : 'Creating account...'
+                : isProcessingRecovery
+                  ? 'Validating recovery link...'
                 : mode === 'signin'
                   ? 'Sign in'
                   : mode === 'reset'

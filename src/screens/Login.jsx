@@ -35,7 +35,7 @@ const getCallbackOrigin = () => {
 };
 
 const getResetRedirectUrl = (role) => {
-  return `${getCallbackOrigin()}/reset-password?role=${encodeURIComponent(role)}`;
+  return `${getCallbackOrigin()}/reset-password/${encodeURIComponent(role)}`;
 };
 
 const getSignupCallbackUrl = (role) => {
@@ -117,8 +117,23 @@ export default function Login() {
         setError('');
       }
     });
+
+    // Fallback: if supabase-js already consumed the recovery token before this
+    // component mounted (and fired PASSWORD_RECOVERY before our listener attached),
+    // an active session will be present. Treat any session on the reset-password
+    // path as a recovery session so we show the new-password form.
+    if (location.pathname.startsWith('/reset-password')) {
+      supabase.auth.getSession().then(({ data: sessionData }) => {
+        if (sessionData.session) {
+          setMode('update-password');
+          setRecoveryHandled(true);
+          setIsProcessingRecovery(false);
+        }
+      });
+    }
+
     return () => data.subscription.unsubscribe();
-  }, []);
+  }, [location.pathname]);
 
   useEffect(() => {
     let cancelled = false;

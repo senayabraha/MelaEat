@@ -208,7 +208,11 @@ const applySort = (query, sort) => {
 };
 
 const applyFilters = (query, filters = {}) =>
-  Object.entries(filters).reduce((q, [key, value]) => q.eq(key, value), query);
+  Object.entries(filters).reduce((q, [key, value]) => {
+    if (Array.isArray(value)) return q.in(key, value);
+    if (value === null) return q.is(key, null);
+    return q.eq(key, value);
+  }, query);
 
 const entity = (name) => {
   const table = tables[name];

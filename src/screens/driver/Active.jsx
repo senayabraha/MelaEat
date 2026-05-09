@@ -34,10 +34,7 @@ export default function DriverActive() {
   // Available orders (ready, no driver yet)
   const { data: available = [] } = useQuery({
     queryKey: ['driver-available'],
-    queryFn: async () => {
-      const all = await base44.entities.Order.filter({ status: 'ready_for_pickup' }, '-created_date', 50);
-      return all.filter(o => !o.driver_email);
-    },
+    queryFn: () => base44.entities.Order.filter({ status: 'ready_for_pickup', driver_email: null }, '-created_date', 50),
     refetchInterval: 8000,
     enabled: approved && user.driver_status === 'online',
   });
@@ -45,10 +42,10 @@ export default function DriverActive() {
   // Active orders for this driver
   const { data: active = [] } = useQuery({
     queryKey: ['driver-active', user.email],
-    queryFn: async () => {
-      const all = await base44.entities.Order.filter({ driver_email: user.email }, '-created_date', 20);
-      return all.filter(o => ['ready_for_pickup', 'picked_up', 'on_the_way'].includes(o.status));
-    },
+    queryFn: () => base44.entities.Order.filter({
+      driver_email: user.email,
+      status: ['ready_for_pickup', 'picked_up', 'on_the_way'],
+    }, '-updated_date', 20),
     refetchInterval: 8000,
   });
 

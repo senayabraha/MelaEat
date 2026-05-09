@@ -364,6 +364,13 @@ create index if not exists orders_restaurant_idx on public.orders(restaurant_id)
 create index if not exists orders_driver_idx on public.orders(driver_email);
 create unique index if not exists orders_order_number_key on public.orders(order_number);
 create unique index if not exists orders_customer_idempotency_key_idx on public.orders(customer_email, idempotency_key) where idempotency_key is not null;
+create index if not exists orders_restaurant_status_created_desc_idx on public.orders(restaurant_id, status, created_date desc);
+create index if not exists orders_restaurant_created_desc_idx on public.orders(restaurant_id, created_date desc);
+create index if not exists orders_driver_status_updated_desc_idx on public.orders(driver_email, status, updated_date desc);
+create index if not exists orders_driver_status_created_desc_idx on public.orders(driver_email, status, created_date desc);
+create index if not exists orders_customer_created_desc_idx on public.orders(customer_email, created_date desc);
+create index if not exists orders_created_desc_idx on public.orders(created_date desc);
+create index if not exists orders_ready_unassigned_created_desc_idx on public.orders(created_date desc) where status = 'ready_for_pickup' and driver_email is null;
 create index if not exists chat_messages_order_idx on public.chat_messages(order_id);
 create index if not exists profiles_driver_approval_idx on public.profiles(driver_approval_status);
 
@@ -380,6 +387,7 @@ create table if not exists public.order_status_events (
 );
 
 create index if not exists order_status_events_order_idx on public.order_status_events(order_id);
+create index if not exists order_status_events_order_created_desc_idx on public.order_status_events(order_id, created_date desc);
 
 create or replace function public.create_order_atomic(
   p_customer_id uuid,

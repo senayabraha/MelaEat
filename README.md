@@ -57,8 +57,9 @@ The app uses `SUPABASE_SERVICE_ROLE_KEY` only on the server for privileged flows
 
 - Apply `supabase/migrations/20260508000000_order_number_promo_atomic_rpc.sql` before deploying the updated checkout route.
 - Apply `supabase/migrations/20260508010000_order_state_machine_rls_auth.sql` before deploying the updated order action route.
+- Apply `supabase/migrations/20260508020000_order_dashboard_indexes.sql` before load-testing dashboard queues.
 - Run the latest `sql/schema.sql` in Supabase SQL editor after pulling changes.
-- Confirm `order_status_events`, cash payment fields, order triggers, `create_order_atomic`, `apply_order_action`, and `next_order_number` exist in Supabase.
+- Confirm `order_status_events`, cash payment fields, order triggers, dashboard indexes, `create_order_atomic`, `apply_order_action`, and `next_order_number` exist in Supabase.
 - Confirm `orders.order_number` is unique/not null and `orders_customer_idempotency_key_idx` exists.
 - Confirm direct authenticated order insert/update and order event insert policies are absent.
 - Confirm Storage has the `restaurant-assets` public bucket.

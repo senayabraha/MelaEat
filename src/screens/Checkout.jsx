@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useCart } from '@/lib/cart';
-import { formatETB, isOpenNow } from '@/lib/format';
+import { formatETB, isOpenNow, isOpenAt } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
 import MapPicker from '@/components/customer/MapPicker';
 import { MapPin, Loader2 } from 'lucide-react';
@@ -90,7 +90,8 @@ export default function Checkout() {
         setLng(pos.coords.longitude);
         toast({ title: 'Location set' });
       },
-      () => toast({ title: 'Could not get location', variant: 'destructive' })
+      () => toast({ title: 'Could not get location', variant: 'destructive' }),
+      { timeout: 8000, maximumAge: 60000 }
     );
   };
 
@@ -113,10 +114,10 @@ export default function Checkout() {
   const statusReason = useMemo(() => {
     if (!restaurant || restaurantLoading) return null;
     if (restaurant.status === 'suspended') return 'This restaurant is temporarily suspended.';
-    if (restaurant.status === 'paused') return 'The restaurant has paused incoming orders.';
+    if (restaurant.is_open_manual === false) return 'The restaurant has paused incoming orders.';
     if (!isOpenNow(restaurant)) return 'The restaurant is currently outside operating hours.';
     return null;
-  }, [restaurant]);
+  }, [restaurant, restaurantLoading]);
 
   const handlePlaceOrder = async () => {
     if (!user) {
@@ -126,7 +127,11 @@ export default function Checkout() {
     const nextErrors = {};
     if (!phone.trim()) nextErrors.phone = 'Phone number is required.';
     if (!hasCoordinate(lat) || !hasCoordinate(lng)) nextErrors.location = 'Please place a delivery pin on the map.';
-    if (deliveryMode === 'schedule' && !scheduledTime) nextErrors.scheduledTime = 'Please pick a delivery date and time.';
+    if (deliveryMode === 'schedule' && !scheduledTime) {
+      nextErrors.scheduledTime = 'Please pick a delivery date and time.';
+    } else if (deliveryMode === 'schedule' && scheduledTime && restaurant && !isOpenAt(restaurant, new Date(scheduledTime))) {
+      nextErrors.scheduledTime = 'The restaurant is closed at that time. Please choose a time within its operating hours.';
+    }
     if (!restaurantLoading && statusReason) nextErrors.restaurant = statusReason;
     if (!restaurantLoading && belowMinimum) nextErrors.minimumOrder = `Minimum order is ${formatETB(restaurant.minimum_order)}.`;
 
@@ -294,7 +299,7 @@ export default function Checkout() {
         <section className="bg-card border border-border rounded-2xl p-6">
           <h2 className="font-display text-xl font-semibold mb-4">Promo code</h2>
           <div className="flex gap-2">
-            <Input value={promoCode} onChange={(e) => setPromoCode(e.target.value)} placeholder="Enter code" />
+            <Input value={promoCode} onChange={(e) => setPromoCode(e.target.value)} placeholder="Enter code (case-insensitive)" />
             <Button variant="outline" onClick={applyPromo}>Apply</Button>
           </div>
           {appliedPromo && (
@@ -323,7 +328,7 @@ export default function Checkout() {
           <Button
             className="w-full h-12 rounded-full mt-5 text-base"
             onClick={handlePlaceOrder}
-            disabled={submitting}
+            disabled={submitting || belowMinimum}
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : `Place order  |  ${formatETB(total)}`}
           </Button>

@@ -38,7 +38,7 @@ export default function AdminOrders() {
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
-            {['all', 'accepted', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way', 'delivered', 'cancelled', 'rejected'].map((value) => (
+            {['all', 'pending', 'accepted', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way', 'delivered', 'cancelled', 'rejected'].map((value) => (
               <SelectItem key={value} value={value}>{value === 'all' ? 'All statuses' : statusLabel(value)}</SelectItem>
             ))}
           </SelectContent>

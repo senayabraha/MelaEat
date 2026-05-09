@@ -1,6 +1,6 @@
 export function formatETB(amount) {
   const n = Number(amount || 0);
-  return `${n.toLocaleString('en-US', { maximumFractionDigits: 2 })} ETB`;
+  return `${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB`;
 }
 
 export function formatTime(iso) {
@@ -23,6 +23,27 @@ export function timeAgo(iso) {
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
   return `${d}d ago`;
+}
+
+export function isOpenAt(restaurant, date) {
+  if (!restaurant) return false;
+  if (restaurant.is_open_manual === false) return false;
+  const hours = restaurant.operating_hours;
+  if (!hours || typeof hours !== 'object') return true;
+  const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const d = new Date(date);
+  const today = hours[dayKeys[d.getDay()]];
+  if (!today || today.closed) return false;
+  const open = today.open || '00:00';
+  const close = today.close || '23:59';
+  const minutesAt = d.getHours() * 60 + d.getMinutes();
+  const [openH, openM] = open.split(':').map(Number);
+  const [closeH, closeM] = close.split(':').map(Number);
+  const openAt = openH * 60 + openM;
+  const closeAt = closeH * 60 + closeM;
+  if (!Number.isFinite(openAt) || !Number.isFinite(closeAt)) return true;
+  if (closeAt < openAt) return minutesAt >= openAt || minutesAt <= closeAt;
+  return minutesAt >= openAt && minutesAt <= closeAt;
 }
 
 export function isOpenNow(restaurant) {

@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { formatETB, formatDate, statusLabel, statusColor } from '@/lib/format';
+import { Star } from 'lucide-react';
 
 export default function DriverHistory() {
   const { user } = useOutletContext();
@@ -29,7 +30,9 @@ export default function DriverHistory() {
                 </div>
                 <p className="font-medium text-sm truncate">{o.restaurant_name} to {o.customer_name}</p>
                 {o.customer_rating_driver && (
-                  <p className="text-xs text-muted-foreground">* {o.customer_rating_driver}/5</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-0.5 mt-0.5">
+                    <Star className="w-3 h-3 fill-accent text-accent" /> {o.customer_rating_driver}/5
+                  </p>
                 )}
               </div>
               <p className="font-medium">{formatETB(o.delivery_fee || 0)}</p>

@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Upload } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import MapPicker from '@/components/customer/MapPicker';
 
 const DAYS = [
   { key: 'mon', label: 'Mon' }, { key: 'tue', label: 'Tue' }, { key: 'wed', label: 'Wed' },
@@ -99,9 +100,14 @@ export default function RestaurantSettings() {
             <Field label="Phone"><Input value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
           </div>
           <Field label="Address"><Input value={form.address_text || ''} onChange={(e) => setForm({ ...form, address_text: e.target.value })} /></Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Latitude"><Input type="number" step="any" value={form.lat || ''} onChange={(e) => setForm({ ...form, lat: Number(e.target.value) })} /></Field>
-            <Field label="Longitude"><Input type="number" step="any" value={form.lng || ''} onChange={(e) => setForm({ ...form, lng: Number(e.target.value) })} /></Field>
+          <div>
+            <Label className="mb-2 block text-sm">Location pin</Label>
+            <MapPicker
+              lat={form.lat || null}
+              lng={form.lng || null}
+              onChange={(lat, lng) => setForm({ ...form, lat, lng })}
+            />
+            <p className="text-xs text-muted-foreground mt-2">Tap the map to place your restaurant pin.</p>
           </div>
         </Section>
 

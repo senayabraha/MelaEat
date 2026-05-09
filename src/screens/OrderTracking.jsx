@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Phone, MapPin, Star } from 'lucide-react';
+import { Phone, MapPin, Star, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -20,20 +20,24 @@ import OrderStatusTimeline from '@/components/orders/OrderStatusTimeline';
 import OrderChat from '@/components/orders/OrderChat';
 import { formatETB, statusLabel, statusColor, paymentStatusLabel, paymentStatusColor } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function OrderTracking() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [showRating, setShowRating] = useState(false);
   const [restaurantStars, setRestaurantStars] = useState(0);
   const [driverStars, setDriverStars] = useState(0);
   const [review, setReview] = useState('');
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [showIssue, setShowIssue] = useState(false);
+  const [issueDescription, setIssueDescription] = useState('');
   const { toast } = useToast();
 
-  const { data: order, refetch } = useQuery({
+  const { data: order, isLoading, refetch } = useQuery({
     queryKey: ['order', id],
     queryFn: () => base44.entities.Order.get(id),
-    refetchInterval: 8000,
+    refetchInterval: 30000,
   });
 
   const { data: driverProfile } = useQuery({
@@ -53,14 +57,18 @@ export default function OrderTracking() {
   }, [id, refetch]);
 
   const submitRating = async () => {
-    await base44.orders.submitRating(id, {
-      customer_rating_restaurant: restaurantStars,
-      customer_rating_driver: driverStars,
-      customer_review: review,
-    });
-    setShowRating(false);
-    toast({ title: 'Thank you for your rating!' });
-    refetch();
+    try {
+      await base44.orders.submitRating(id, {
+        customer_rating_restaurant: restaurantStars,
+        customer_rating_driver: driverStars,
+        customer_review: review,
+      });
+      setShowRating(false);
+      toast({ title: 'Thank you for your rating!' });
+      refetch();
+    } catch (error) {
+      toast({ title: 'Could not submit rating', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
   };
 
   const cancelOrder = async () => {
@@ -78,11 +86,35 @@ export default function OrderTracking() {
     }
   };
 
-  if (!order) {
-    return <div className="max-w-2xl mx-auto px-4 py-20 text-center text-muted-foreground">Loading order...</div>;
+  const submitIssue = async () => {
+    if (!issueDescription.trim()) return;
+    try {
+      await base44.entities.IssueReport.create({
+        order_id: id,
+        reporter_email: user?.email,
+        reporter_role: 'customer',
+        category: 'other',
+        description: issueDescription.trim(),
+      });
+      setShowIssue(false);
+      setIssueDescription('');
+      toast({ title: 'Issue reported', description: 'Our team will review this.' });
+    } catch (error) {
+      toast({ title: 'Could not submit issue', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
+  };
+
+  if (isLoading || !order) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 flex flex-col items-center gap-4 text-muted-foreground">
+        <Loader2 className="w-8 h-8 animate-spin" />
+        <p>Loading order…</p>
+      </div>
+    );
   }
 
   const isDelivered = order.status === 'delivered';
+  const isClosed = ['delivered', 'cancelled', 'rejected'].includes(order.status);
   const alreadyRated = !!order.customer_rating_restaurant;
   const canCancel = ['accepted', 'pending'].includes(order.status);
 
@@ -147,7 +179,8 @@ export default function OrderTracking() {
             </section>
           )}
 
-          {(order.status !== 'delivered' && order.status !== 'cancelled' && order.status !== 'rejected') && (
+          {/* Chat: open during active orders AND for 24h after delivery so customers can flag issues */}
+          {!isClosed && (
             <OrderChat orderId={order.id} currentRole="customer" recipientRole={order.driver_email ? 'driver' : 'restaurant'} />
           )}
 
@@ -155,6 +188,21 @@ export default function OrderTracking() {
             <section className="bg-card border border-border rounded-2xl p-6">
               <h2 className="font-display text-xl font-semibold mb-3">How was it?</h2>
               <Button onClick={() => setShowRating(true)}>Rate your experience</Button>
+            </section>
+          )}
+
+          {/* Post-delivery issue report */}
+          {isDelivered && (
+            <section className="bg-card border border-border rounded-2xl p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-display text-lg font-semibold">Problem with this order?</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">Missing item, wrong order, or other issue.</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setShowIssue(true)}>
+                  <AlertTriangle className="w-4 h-4 mr-1" /> Report issue
+                </Button>
+              </div>
             </section>
           )}
         </div>
@@ -191,6 +239,7 @@ export default function OrderTracking() {
         </div>
       </div>
 
+      {/* Rating dialog */}
       <Dialog open={showRating} onOpenChange={setShowRating}>
         <DialogContent>
           <DialogHeader>
@@ -216,6 +265,7 @@ export default function OrderTracking() {
         </DialogContent>
       </Dialog>
 
+      {/* Cancel confirmation */}
       <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -230,6 +280,27 @@ export default function OrderTracking() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Issue report dialog */}
+      <Dialog open={showIssue} onOpenChange={setShowIssue}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report an issue</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={issueDescription}
+              onChange={(e) => setIssueDescription(e.target.value)}
+              rows={4}
+              placeholder="Describe the issue — e.g. missing item, wrong order, cold food…"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowIssue(false)}>Cancel</Button>
+              <Button onClick={submitIssue} disabled={!issueDescription.trim()}>Submit issue</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

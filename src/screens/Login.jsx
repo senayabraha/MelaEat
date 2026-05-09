@@ -22,12 +22,12 @@ const roleDestinations = {
   admin: '/admin',
 };
 
-const PRODUCTION_RESET_REDIRECT = 'https://mela-eat.vercel.app/reset-password';
-
 const getResetRedirectUrl = (role) => {
   const origin = window.location.origin;
   const isLocalhost = origin.includes('localhost') || origin.startsWith('http://127.0.0.1');
-  const baseUrl = isLocalhost ? PRODUCTION_RESET_REDIRECT : `${origin}/reset-password`;
+  const configuredUrl = import.meta.env.VITE_APP_URL || import.meta.env.NEXT_PUBLIC_APP_URL;
+  const productionBase = configuredUrl ? `${configuredUrl}/reset-password` : 'https://mela-eat.vercel.app/reset-password';
+  const baseUrl = isLocalhost ? productionBase : `${origin}/reset-password`;
   const separator = baseUrl.includes('?') ? '&' : '?';
   return `${baseUrl}${separator}role=${role}`;
 };

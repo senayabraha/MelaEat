@@ -4,10 +4,19 @@ import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/lib/cart';
 import { formatETB } from '@/lib/format';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 
 export default function Cart() {
   const { cart, updateQuantity, removeItem, subtotal, itemCount } = useCart();
   const navigate = useNavigate();
+
+  const { data: restaurant } = useQuery({
+    queryKey: ['restaurant', cart.restaurant_id],
+    queryFn: () => base44.entities.Restaurant.get(cart.restaurant_id),
+    enabled: !!cart.restaurant_id,
+    staleTime: 60000,
+  });
 
   if (itemCount === 0) {
     return (
@@ -75,8 +84,8 @@ export default function Cart() {
           <span>{formatETB(subtotal)}</span>
         </div>
         <div className="flex justify-between text-sm mb-4 text-muted-foreground">
-          <span>Delivery & fees</span>
-          <span>Calculated at checkout</span>
+          <span>Delivery fee</span>
+          <span>{restaurant ? formatETB(restaurant.delivery_fee || 0) : 'Calculated at checkout'}</span>
         </div>
         <Button onClick={() => navigate('/checkout')} className="w-full h-12 rounded-full text-base">
           Continue to checkout  |  {formatETB(subtotal)}

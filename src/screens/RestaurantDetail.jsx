@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Star, Clock, MapPin, Bike, Heart } from 'lucide-react';
+import { Star, Clock, MapPin, Bike, Heart, AlertCircle } from 'lucide-react';
 import MenuItemCard from '@/components/customer/MenuItemCard';
 import ItemDetailDialog from '@/components/customer/ItemDetailDialog';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { useToast } from '@/components/ui/use-toast';
 
 export default function RestaurantDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [activeItem, setActiveItem] = useState(null);
   const [user, setUser] = useState(null);
   const [activeCategory, setActiveCategory] = useState(null);
@@ -31,11 +32,18 @@ export default function RestaurantDetail() {
 
   useEffect(() => {
     base44.auth.isAuthenticated().then(async (a) => {
-      if (a) try { setUser(await base44.auth.me()); } catch {}
+      if (a) {
+        try {
+          setUser(await base44.auth.me());
+        } catch (error) {
+          // Auth check failed — continue as unauthenticated visitor
+          console.error('Auth check error:', error);
+        }
+      }
     });
   }, []);
 
-  const { data: restaurant, isLoading } = useQuery({
+  const { data: restaurant, isLoading, isError: restaurantError } = useQuery({
     queryKey: ['restaurant', id],
     queryFn: () => base44.entities.Restaurant.get(id),
   });
@@ -46,7 +54,7 @@ export default function RestaurantDetail() {
     enabled: !!id,
   });
 
-  const { data: items = [] } = useQuery({
+  const { data: items = [], isError: itemsError } = useQuery({
     queryKey: ['menu-items', id],
     queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: id }, 'sort_order'),
     enabled: !!id,
@@ -75,8 +83,12 @@ export default function RestaurantDetail() {
     }
     const current = user.favorite_restaurant_ids || [];
     const next = isFavorite ? current.filter((x) => x !== id) : [...current, id];
-    await base44.auth.updateMe({ favorite_restaurant_ids: next });
-    setUser({ ...user, favorite_restaurant_ids: next });
+    try {
+      await base44.auth.updateMe({ favorite_restaurant_ids: next });
+      setUser({ ...user, favorite_restaurant_ids: next });
+    } catch (error) {
+      toast({ title: 'Could not update favorites', description: error.message, variant: 'destructive' });
+    }
   };
 
   const handleAddItem = (item) => setActiveItem(item);
@@ -114,6 +126,16 @@ export default function RestaurantDetail() {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="aspect-[16/6] bg-secondary rounded-2xl animate-pulse" />
+      </div>
+    );
+  }
+
+  if (restaurantError) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-3">
+        <AlertCircle className="w-10 h-10 text-destructive mx-auto" />
+        <p className="font-display text-2xl">Could not load restaurant</p>
+        <Button variant="outline" onClick={() => navigate('/browse')}>Back to browse</Button>
       </div>
     );
   }
@@ -202,9 +224,15 @@ export default function RestaurantDetail() {
 
         {/* Menu */}
         <div className="space-y-10 mt-6">
-          {grouped.length === 0 && (
+          {itemsError && (
+            <div className="text-center py-12 text-muted-foreground">
+              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-destructive" />
+              <p>Could not load menu items. Please refresh the page.</p>
+            </div>
+          )}
+          {!itemsError && grouped.length === 0 && (
             <div className="text-center py-16 text-muted-foreground">
-              This restaurant hasn't added menu items yet.
+              This restaurant hasn&apos;t added menu items yet.
             </div>
           )}
           {grouped.map((g) => (
@@ -224,7 +252,7 @@ export default function RestaurantDetail() {
       {itemCount > 0 && (
         <div className="fixed bottom-6 inset-x-0 z-30 flex justify-center px-4 pointer-events-none">
           <Button
-            onClick={() => (window.location.href = '/cart')}
+            onClick={() => navigate('/cart')}
             className="pointer-events-auto h-12 px-6 rounded-full shadow-lg gap-3"
           >
             <span className="bg-primary-foreground/20 px-2 py-0.5 rounded-full text-xs font-semibold">{itemCount}</span>

@@ -64,7 +64,7 @@ export default function AdminUsers() {
             </Select>
             {user.role === 'driver' && (
               <Select
-                value={user.driver_approval_status || 'approved'}
+                value={user.driver_approval_status || 'pending'}
                 onValueChange={(value) => setDriverApproval(user, value)}
               >
                 <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>

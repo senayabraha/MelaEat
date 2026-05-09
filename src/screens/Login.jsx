@@ -22,6 +22,16 @@ const roleDestinations = {
   admin: '/admin',
 };
 
+const PRODUCTION_RESET_REDIRECT = 'https://mela-eat.vercel.app/reset-password';
+
+const getResetRedirectUrl = (role) => {
+  const origin = window.location.origin;
+  const isLocalhost = origin.includes('localhost') || origin.startsWith('http://127.0.0.1');
+  const baseUrl = isLocalhost ? PRODUCTION_RESET_REDIRECT : `${origin}/reset-password`;
+  const separator = baseUrl.includes('?') ? '&' : '?';
+  return `${baseUrl}${separator}role=${role}`;
+};
+
 export default function Login() {
   const { role: routeRole } = useParams();
   const location = useLocation();
@@ -144,9 +154,8 @@ export default function Login() {
       }
 
       if (mode === 'reset') {
-        const origin = window.location.origin;
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${origin}/reset-password?role=${selectedRole}`,
+          redirectTo: getResetRedirectUrl(selectedRole),
         });
 
         if (resetError) throw resetError;

@@ -75,6 +75,12 @@ export default function Login() {
       const hashType = hashParams.get('type');
 
       try {
+        const { data: existingSessionData } = await supabase.auth.getSession();
+        if (existingSessionData.session) {
+          setMode('update-password');
+          return;
+        }
+
         if (accessToken && refreshToken && hashType === 'recovery') {
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -304,17 +310,18 @@ export default function Login() {
                 )}
               </>
             )}
-            <div>
-              <Label className="mb-2 block">Email</Label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                required={mode !== 'update-password'}
-                disabled={mode === 'update-password'}
-              />
-            </div>
+            {mode !== 'update-password' && (
+              <div>
+                <Label className="mb-2 block">Email</Label>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+            )}
             {isPasswordMode && (
               <div>
                 <Label className="mb-2 block">{mode === 'update-password' ? 'New password' : 'Password'}</Label>

@@ -1103,7 +1103,7 @@ using (
     role = 'driver'
     and exists (
       select 1 from public.orders o
-      where o.driver_id = profiles.id
+      where o.driver_email = profiles.email
       and public.can_access_order(o.id)
     )
   )

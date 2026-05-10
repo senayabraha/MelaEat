@@ -24,6 +24,7 @@ import Addresses from '@/screens/Addresses';
 import Login from '@/screens/Login';
 import Logout from '@/screens/Logout';
 import RoleSelection from '@/screens/RoleSelection';
+import TaskDashboard from '@/screens/TaskDashboard';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 import RestaurantOverview from '@/screens/restaurant/Overview';
@@ -125,6 +126,7 @@ const AuthenticatedApp = () => {
       <Route path="/logout" element={<Navigate to="/logout/customer" replace />} />
       <Route path="/logout/:role" element={<Logout />} />
       <Route path="/select-role" element={<RoleSelection />} />
+      <Route path="/tasks" element={<TaskDashboard />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

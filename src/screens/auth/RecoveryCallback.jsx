@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import Logo from '@/components/layout/Logo';
 import { supabase } from '@/api/apiClient';
 
 export default function RecoveryCallback({ authMode, onError }) {
@@ -83,7 +82,6 @@ export default function RecoveryCallback({ authMode, onError }) {
 
     process();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

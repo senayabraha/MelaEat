@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -11,17 +11,17 @@ export default function AdminUsers() {
   const { toast } = useToast();
   const { data: users = [] } = useQuery({
     queryKey: ['admin-users-full'],
-    queryFn: () => base44.entities.User.list('-created_date', 500),
+    queryFn: () => melaeat.entities.User.list('-created_date', 500),
   });
 
   const setRole = async (user, role) => {
-    await base44.entities.User.update(user.id, { role });
+    await melaeat.entities.User.update(user.id, { role });
     qc.invalidateQueries({ queryKey: ['admin-users-full'] });
     toast({ title: 'Role updated' });
   };
 
   const setDriverApproval = async (user, driver_approval_status) => {
-    await base44.entities.User.update(user.id, { driver_approval_status });
+    await melaeat.entities.User.update(user.id, { driver_approval_status });
     qc.invalidateQueries({ queryKey: ['admin-users-full'] });
     toast({ title: 'Driver approval updated' });
   };

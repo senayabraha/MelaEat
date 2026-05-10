@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { formatETB } from '@/lib/format';
 
@@ -11,15 +11,15 @@ export default function RestaurantReports() {
 
   useEffect(() => {
     (async () => {
-      let res = await base44.entities.Restaurant.filter({ owner_email: user.email });
-      if (res.length === 0 && user.restaurant_id) res = [await base44.entities.Restaurant.get(user.restaurant_id)];
+      let res = await melaeat.entities.Restaurant.filter({ owner_email: user.email });
+      if (res.length === 0 && user.restaurant_id) res = [await melaeat.entities.Restaurant.get(user.restaurant_id)];
       setRestaurant(res[0]);
     })();
   }, [user.email]);
 
   const { data: orders = [] } = useQuery({
     queryKey: ['rest-orders-reports', restaurant?.id],
-    queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurant.id }, '-created_date', 500),
+    queryFn: () => melaeat.entities.Order.filter({ restaurant_id: restaurant.id }, '-created_date', 500),
     enabled: !!restaurant,
   });
 

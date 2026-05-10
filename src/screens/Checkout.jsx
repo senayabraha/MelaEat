@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -63,7 +63,7 @@ export default function Checkout() {
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ['restaurant', cart.restaurant_id],
-    queryFn: () => base44.entities.Restaurant.get(cart.restaurant_id),
+    queryFn: () => melaeat.entities.Restaurant.get(cart.restaurant_id),
     enabled: !!cart.restaurant_id,
   });
 
@@ -97,7 +97,7 @@ export default function Checkout() {
 
   const applyPromo = async () => {
     if (!promoCode.trim()) return;
-    const res = await base44.entities.Promotion.filter({ code: promoCode.trim().toUpperCase(), is_active: true });
+    const res = await melaeat.entities.Promotion.filter({ code: promoCode.trim().toUpperCase(), is_active: true });
     if (res.length === 0) {
       toast({ title: 'Invalid promo code', variant: 'destructive' });
       return;
@@ -161,7 +161,7 @@ export default function Checkout() {
         scheduled_for: deliveryMode === 'schedule' ? new Date(scheduledTime).toISOString() : null,
         idempotency_key: orderIdempotencyKey,
       };
-      const { order: created } = await base44.orders.create(payload);
+      const { order: created } = await melaeat.orders.create(payload);
       clear();
       setOrderIdempotencyKey(createIdempotencyKey());
       navigate(`/order/${created.id}`);

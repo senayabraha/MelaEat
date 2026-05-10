@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Star, Clock, MapPin, Bike, Heart, AlertCircle } from 'lucide-react';
 import MenuItemCard from '@/components/customer/MenuItemCard';
 import ItemDetailDialog from '@/components/customer/ItemDetailDialog';
@@ -31,10 +31,10 @@ export default function RestaurantDetail() {
   const { toast } = useToast();
 
   useEffect(() => {
-    base44.auth.isAuthenticated().then(async (a) => {
+    melaeat.auth.isAuthenticated().then(async (a) => {
       if (a) {
         try {
-          setUser(await base44.auth.me());
+          setUser(await melaeat.auth.me());
         } catch (error) {
           // Auth check failed — continue as unauthenticated visitor
           console.error('Auth check error:', error);
@@ -45,18 +45,18 @@ export default function RestaurantDetail() {
 
   const { data: restaurant, isLoading, isError: restaurantError } = useQuery({
     queryKey: ['restaurant', id],
-    queryFn: () => base44.entities.Restaurant.get(id),
+    queryFn: () => melaeat.entities.Restaurant.get(id),
   });
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', id],
-    queryFn: () => base44.entities.MenuCategory.filter({ restaurant_id: id }, 'sort_order'),
+    queryFn: () => melaeat.entities.MenuCategory.filter({ restaurant_id: id }, 'sort_order'),
     enabled: !!id,
   });
 
   const { data: items = [], isError: itemsError } = useQuery({
     queryKey: ['menu-items', id],
-    queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: id }, 'sort_order'),
+    queryFn: () => melaeat.entities.MenuItem.filter({ restaurant_id: id }, 'sort_order'),
     enabled: !!id,
   });
 
@@ -78,13 +78,13 @@ export default function RestaurantDetail() {
 
   const toggleFavorite = async () => {
     if (!user) {
-      base44.auth.redirectToLogin(window.location.href);
+      melaeat.auth.redirectToLogin(window.location.href);
       return;
     }
     const current = user.favorite_restaurant_ids || [];
     const next = isFavorite ? current.filter((x) => x !== id) : [...current, id];
     try {
-      await base44.auth.updateMe({ favorite_restaurant_ids: next });
+      await melaeat.auth.updateMe({ favorite_restaurant_ids: next });
       setUser({ ...user, favorite_restaurant_ids: next });
     } catch (error) {
       toast({ title: 'Could not update favorites', description: error.message, variant: 'destructive' });

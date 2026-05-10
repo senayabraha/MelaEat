@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import RestaurantCard from '@/components/customer/RestaurantCard';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
@@ -16,7 +16,7 @@ export default function Favorites() {
     queryKey: ['favorites', ids],
     queryFn: async () => {
       if (ids.length === 0) return [];
-      const all = await base44.entities.Restaurant.filter({ status: 'approved' }, '-created_date', 200);
+      const all = await melaeat.entities.Restaurant.filter({ status: 'approved' }, '-created_date', 200);
       return all.filter((r) => ids.includes(r.id));
     },
     enabled: !!user,

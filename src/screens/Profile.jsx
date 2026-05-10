@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,7 +27,7 @@ export default function Profile() {
   const save = async () => {
     setSaving(true);
     try {
-      await base44.auth.updateMe({
+      await melaeat.auth.updateMe({
         full_name: fullName.trim(),
         phone,
         default_address_text: addressText.trim(),

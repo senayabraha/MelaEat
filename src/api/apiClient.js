@@ -291,7 +291,7 @@ const entity = (name) => {
   };
 };
 
-export const base44 = {
+export const melaeat = {
   auth: {
     async isAuthenticated() {
       authNetworkMetrics.sessionReads += 1;
@@ -349,9 +349,7 @@ export const base44 = {
     async completeRole(role) {
       const response = await authFetch('/api/profile/complete-role', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role }),
       });
 
@@ -367,9 +365,7 @@ export const base44 = {
     async setupRestaurant({ name }) {
       const response = await authFetch('/api/restaurant/setup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       });
 
@@ -386,9 +382,7 @@ export const base44 = {
     async create(payload) {
       const response = await authFetch('/api/orders', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -403,9 +397,7 @@ export const base44 = {
     async action(orderId, payload) {
       const response = await authFetch(`/api/orders/${orderId}/action`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -420,9 +412,7 @@ export const base44 = {
     async submitRating(orderId, payload) {
       const response = await authFetch(`/api/orders/${orderId}/rate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 

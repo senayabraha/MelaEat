@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Phone, MapPin, Star, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -36,21 +36,21 @@ export default function OrderTracking() {
 
   const { data: order, isLoading, refetch } = useQuery({
     queryKey: ['order', id],
-    queryFn: () => base44.entities.Order.get(id),
+    queryFn: () => melaeat.entities.Order.get(id),
     refetchInterval: 30000,
   });
 
   const { data: driverProfile } = useQuery({
     queryKey: ['driver-profile', order?.driver_email],
     queryFn: async () => {
-      const profiles = await base44.entities.User.filter({ email: order.driver_email }, '-created_date', 1);
+      const profiles = await melaeat.entities.User.filter({ email: order.driver_email }, '-created_date', 1);
       return profiles[0] || null;
     },
     enabled: !!order?.driver_email,
   });
 
   useEffect(() => {
-    const unsub = base44.entities.Order.subscribe((evt) => {
+    const unsub = melaeat.entities.Order.subscribe((evt) => {
       if (evt.id === id) refetch();
     });
     return () => unsub && unsub();
@@ -58,7 +58,7 @@ export default function OrderTracking() {
 
   const submitRating = async () => {
     try {
-      await base44.orders.submitRating(id, {
+      await melaeat.orders.submitRating(id, {
         customer_rating_restaurant: restaurantStars,
         customer_rating_driver: driverStars,
         customer_review: review,
@@ -73,7 +73,7 @@ export default function OrderTracking() {
 
   const cancelOrder = async () => {
     try {
-      await base44.orders.action(id, { action: 'customer_cancel', reason: 'Cancelled by customer' });
+      await melaeat.orders.action(id, { action: 'customer_cancel', reason: 'Cancelled by customer' });
       setConfirmCancel(false);
       toast({ title: 'Order cancelled' });
       refetch();
@@ -89,7 +89,7 @@ export default function OrderTracking() {
   const submitIssue = async () => {
     if (!issueDescription.trim()) return;
     try {
-      await base44.entities.IssueReport.create({
+      await melaeat.entities.IssueReport.create({
         order_id: id,
         reporter_email: user?.email,
         reporter_role: 'customer',

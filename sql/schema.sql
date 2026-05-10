@@ -1099,7 +1099,14 @@ to authenticated
 using (
   id = auth.uid()
   or public.is_admin()
-  or role = 'driver'
+  or (
+    role = 'driver'
+    and exists (
+      select 1 from public.orders o
+      where o.driver_id = profiles.id
+      and public.can_access_order(o.id)
+    )
+  )
 );
 
 create policy "profile insert own row" on public.profiles

@@ -1,22 +1,22 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Store, Users, ClipboardList, DollarSign, ChevronRight } from 'lucide-react';
 import { formatETB } from '@/lib/format';
 
 export default function AdminOverview() {
   const { data: restaurants = [] } = useQuery({
     queryKey: ['admin-restaurants'],
-    queryFn: () => base44.entities.Restaurant.list('-created_date', 500),
+    queryFn: () => melaeat.entities.Restaurant.list('-created_date', 500),
   });
   const { data: users = [] } = useQuery({
     queryKey: ['admin-users'],
-    queryFn: () => base44.entities.User.list('-created_date', 500),
+    queryFn: () => melaeat.entities.User.list('-created_date', 500),
   });
   const { data: orders = [] } = useQuery({
     queryKey: ['admin-orders'],
-    queryFn: () => base44.entities.Order.list('-created_date', 500),
+    queryFn: () => melaeat.entities.Order.list('-created_date', 500),
   });
 
   // Build a map of restaurant_id → commission_rate for accurate per-restaurant rates

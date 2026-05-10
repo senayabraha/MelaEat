@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useCallback, useEffect, useRef } from 'react';
-import { base44, supabase } from '@/api/base44Client';
+import { melaeat, supabase } from '@/api/apiClient';
 
 const AuthContext = createContext();
 
@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
   const authRunId = useRef(0);
 
   const clearAuthState = useCallback(() => {
-    base44.auth.clearCache();
+    melaeat.auth.clearCache();
     setUser(null);
     setIsAuthenticated(false);
     setAuthError(null);
@@ -31,8 +31,8 @@ export const AuthProvider = ({ children }) => {
       }
 
       const currentUser = sessionOverride
-        ? await base44.auth.fromSession(sessionOverride)
-        : await base44.auth.me();
+        ? await melaeat.auth.fromSession(sessionOverride)
+        : await melaeat.auth.me();
 
       if (runId !== authRunId.current) return currentUser;
 
@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       if (runId !== authRunId.current) return null;
       console.error('Supabase auth check failed:', error);
-      base44.auth.clearCache();
+      melaeat.auth.clearCache();
       setUser(null);
       setIsAuthenticated(false);
       setAuthError({ type: 'unknown', message: error.message || 'Failed to load user' });
@@ -90,8 +90,8 @@ export const AuthProvider = ({ children }) => {
     };
   }, [checkUserAuth]);
 
-  const logout = () => base44.auth.logout(user?.role);
-  const navigateToLogin = () => base44.auth.redirectToLogin(window.location.href, user?.role);
+  const logout = () => melaeat.auth.logout(user?.role);
+  const navigateToLogin = () => melaeat.auth.redirectToLogin(window.location.href, user?.role);
 
   return (
     <AuthContext.Provider value={{

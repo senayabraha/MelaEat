@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { timeAgo } from '@/lib/format';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -13,13 +13,13 @@ export default function OrderChat({ orderId, currentRole, recipientRole }) {
   const endRef = useRef(null);
 
   const load = async () => {
-    const list = await base44.entities.ChatMessage.filter({ order_id: orderId }, 'created_date');
+    const list = await melaeat.entities.ChatMessage.filter({ order_id: orderId }, 'created_date');
     setMessages(list);
   };
 
   useEffect(() => {
     load();
-    const unsub = base44.entities.ChatMessage.subscribe((evt) => {
+    const unsub = melaeat.entities.ChatMessage.subscribe((evt) => {
       if (evt.data?.order_id === orderId) load();
     });
     return () => unsub && unsub();
@@ -31,7 +31,7 @@ export default function OrderChat({ orderId, currentRole, recipientRole }) {
 
   const send = async () => {
     if (!text.trim() || !user) return;
-    await base44.entities.ChatMessage.create({
+    await melaeat.entities.ChatMessage.create({
       order_id: orderId,
       sender_email: user.email,
       sender_role: currentRole,

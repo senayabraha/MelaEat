@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useCart } from '@/lib/cart';
 import { formatETB } from '@/lib/format';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 
 export default function Cart() {
   const { cart, updateQuantity, removeItem, subtotal, itemCount } = useCart();
@@ -13,7 +13,7 @@ export default function Cart() {
 
   const { data: restaurant } = useQuery({
     queryKey: ['restaurant', cart.restaurant_id],
-    queryFn: () => base44.entities.Restaurant.get(cart.restaurant_id),
+    queryFn: () => melaeat.entities.Restaurant.get(cart.restaurant_id),
     enabled: !!cart.restaurant_id,
     staleTime: 60000,
   });

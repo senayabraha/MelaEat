@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,7 +41,7 @@ export default function Addresses() {
         default_lng: form.default_lng,
         saved_addresses: savedAddresses,
       };
-      await base44.auth.updateMe(payload);
+      await melaeat.auth.updateMe(payload);
       await checkUserAuth();
       toast({ title: 'Delivery location updated' });
     } catch (error) {

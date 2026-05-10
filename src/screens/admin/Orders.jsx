@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatETB, formatDate, statusLabel, statusColor, paymentStatusLabel } from '@/lib/format';
@@ -11,7 +11,7 @@ export default function AdminOrders() {
   const [payment, setPayment] = useState('all');
   const { data: orders = [] } = useQuery({
     queryKey: ['admin-all-orders'],
-    queryFn: () => base44.entities.Order.list('-created_date', 200),
+    queryFn: () => melaeat.entities.Order.list('-created_date', 200),
   });
 
   const filtered = useMemo(() => {

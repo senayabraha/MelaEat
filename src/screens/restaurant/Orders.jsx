@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import OrderTicket from '@/components/restaurant/OrderTicket';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -20,22 +20,22 @@ export default function RestaurantOrders() {
 
   useEffect(() => {
     (async () => {
-      let res = await base44.entities.Restaurant.filter({ owner_email: user.email });
-      if (res.length === 0 && user.restaurant_id) res = [await base44.entities.Restaurant.get(user.restaurant_id)];
+      let res = await melaeat.entities.Restaurant.filter({ owner_email: user.email });
+      if (res.length === 0 && user.restaurant_id) res = [await melaeat.entities.Restaurant.get(user.restaurant_id)];
       setRestaurant(res[0]);
     })();
   }, [user.email]);
 
   const { data: orders = [] } = useQuery({
     queryKey: ['restaurant-orders-full', restaurant?.id],
-    queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurant.id }, '-created_date', 200),
+    queryFn: () => melaeat.entities.Order.filter({ restaurant_id: restaurant.id }, '-created_date', 200),
     enabled: !!restaurant,
     refetchInterval: 8000,
   });
 
   const { data: drivers = [] } = useQuery({
     queryKey: ['available-drivers'],
-    queryFn: () => base44.entities.User.filter({ role: 'driver', driver_status: 'online' }),
+    queryFn: () => melaeat.entities.User.filter({ role: 'driver', driver_status: 'online' }),
     enabled: !!restaurant,
   });
 
@@ -43,7 +43,7 @@ export default function RestaurantOrders() {
 
   const accept = async (o) => {
     try {
-      await base44.orders.action(o.id, { action: 'accept' });
+      await melaeat.orders.action(o.id, { action: 'accept' });
       toast({ title: 'Order accepted' });
       refresh();
     } catch (error) {
@@ -57,7 +57,7 @@ export default function RestaurantOrders() {
   const confirmReject = async () => {
     if (!rejectingOrder) return;
     try {
-      await base44.orders.action(rejectingOrder.id, {
+      await melaeat.orders.action(rejectingOrder.id, {
         action: 'reject',
         reason: rejectReason,
       });
@@ -70,7 +70,7 @@ export default function RestaurantOrders() {
   };
   const advance = async (o, value, extra = {}) => {
     try {
-      await base44.orders.action(o.id, { action: value, ...extra });
+      await melaeat.orders.action(o.id, { action: value, ...extra });
       refresh();
     } catch (error) {
       toast({ title: 'Could not update order', description: error.message || 'Please try again.', variant: 'destructive' });
@@ -78,7 +78,7 @@ export default function RestaurantOrders() {
   };
   const assign = async (o, driver) => {
     try {
-      await base44.orders.action(o.id, { action: 'assign_driver', driver_email: driver.email });
+      await melaeat.orders.action(o.id, { action: 'assign_driver', driver_email: driver.email });
       toast({ title: `Assigned to ${driver.full_name}` });
       refresh();
     } catch (error) {

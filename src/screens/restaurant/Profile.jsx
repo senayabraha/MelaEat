@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,7 +27,7 @@ export default function RestaurantProfile() {
   const save = async () => {
     setSaving(true);
     try {
-      await base44.auth.updateMe({
+      await melaeat.auth.updateMe({
         full_name: form.full_name.trim(),
         phone: form.phone,
       });

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,8 +24,8 @@ export default function RestaurantSettings() {
 
   useEffect(() => {
     (async () => {
-      let res = await base44.entities.Restaurant.filter({ owner_email: user.email });
-      if (res.length === 0 && user.restaurant_id) res = [await base44.entities.Restaurant.get(user.restaurant_id)];
+      let res = await melaeat.entities.Restaurant.filter({ owner_email: user.email });
+      if (res.length === 0 && user.restaurant_id) res = [await melaeat.entities.Restaurant.get(user.restaurant_id)];
       const r = res[0];
       setRestaurant(r);
       setForm(r || {});
@@ -35,7 +35,7 @@ export default function RestaurantSettings() {
   const save = async () => {
     setSaving(true);
     try {
-      await base44.entities.Restaurant.update(restaurant.id, form);
+      await melaeat.entities.Restaurant.update(restaurant.id, form);
       toast({ title: 'Settings saved' });
     } catch (error) {
       toast({ title: 'Could not save settings', description: error.message || 'Please try again.', variant: 'destructive' });
@@ -48,7 +48,7 @@ export default function RestaurantSettings() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await melaeat.integrations.Core.UploadFile({ file });
       setForm({ ...form, [key]: file_url });
       toast({ title: 'Image uploaded' });
     } catch (error) {

@@ -11,6 +11,7 @@
 -- restaurant receipts, the customer's phone, and the driver app all compute
 -- the exact same digits without an extra round-trip or persistence concern.
 
+-- The pin derivation must exist before the generated column references it.
 create or replace function public.derive_delivery_pin(p_id uuid)
 returns text
 language sql
@@ -18,6 +19,23 @@ immutable
 as $$
   select lpad(((('x' || substr(replace(p_id::text, '-', ''), 1, 8))::bit(32)::int & 9999))::text, 4, '0');
 $$;
+
+-- Add columns FIRST. `language sql` functions below resolve their bodies
+-- against the live catalog at CREATE time, so any column they reference
+-- has to exist already.
+alter table public.orders
+add column if not exists delivery_code text
+  generated always as (public.derive_delivery_pin(id)) stored;
+
+create index if not exists orders_delivery_code_idx on public.orders(delivery_code);
+
+-- Audit trail for failed PIN attempts and overrides. Drivers see the count;
+-- support sees the trail.
+alter table public.orders
+add column if not exists delivery_code_attempts integer not null default 0,
+add column if not exists delivery_code_overridden_by text,
+add column if not exists delivery_code_overridden_reason text,
+add column if not exists delivery_code_overridden_at timestamptz;
 
 -- Bumps the failed-attempt counter from outside the rolled-back delivered
 -- transaction. Intentionally service_role-only — the action endpoint calls
@@ -38,20 +56,6 @@ revoke all on function public.increment_delivery_code_attempts(uuid) from public
 revoke all on function public.increment_delivery_code_attempts(uuid) from anon;
 revoke all on function public.increment_delivery_code_attempts(uuid) from authenticated;
 grant execute on function public.increment_delivery_code_attempts(uuid) to service_role;
-
-alter table public.orders
-add column if not exists delivery_code text
-  generated always as (public.derive_delivery_pin(id)) stored;
-
-create index if not exists orders_delivery_code_idx on public.orders(delivery_code);
-
--- Audit trail for failed PIN attempts and overrides. Drivers see the count;
--- support sees the trail.
-alter table public.orders
-add column if not exists delivery_code_attempts integer not null default 0,
-add column if not exists delivery_code_overridden_by text,
-add column if not exists delivery_code_overridden_reason text,
-add column if not exists delivery_code_overridden_at timestamptz;
 
 ------------------------------------------------------------------------------
 -- 2. Tipping

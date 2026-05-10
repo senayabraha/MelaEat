@@ -16,8 +16,7 @@ export default function Favorites() {
     queryKey: ['favorites', ids],
     queryFn: async () => {
       if (ids.length === 0) return [];
-      const all = await melaeat.entities.Restaurant.filter({ status: 'approved' }, '-created_date', 200);
-      return all.filter((r) => ids.includes(r.id));
+      return melaeat.entities.Restaurant.filter({ id: ids, status: 'approved' }, '-created_date', ids.length);
     },
     enabled: !!user,
   });

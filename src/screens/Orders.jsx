@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { melaeat } from '@/api/apiClient';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { melaeat, supabase } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ChevronRight, Repeat, Search, AlertCircle } from 'lucide-react';
+import { ChevronRight, Loader2, Repeat, Search, AlertCircle } from 'lucide-react';
 import { formatETB, statusLabel, statusColor, formatDate, paymentStatusLabel, paymentStatusColor } from '@/lib/format';
 import { useCart } from '@/lib/cart';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/lib/AuthContext';
+
+const ORDERS_PAGE_SIZE = 25;
 
 export default function Orders() {
   const { user } = useAuth();
@@ -17,11 +19,35 @@ export default function Orders() {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
 
-  const { data: orders = [], isLoading, isError, refetch } = useQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['my-orders', user?.email],
-    queryFn: () => melaeat.entities.Order.filter({ customer_email: user.email }, '-created_date', 50),
     enabled: !!user,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam = 0 }) => {
+      const from = pageParam * ORDERS_PAGE_SIZE;
+      const to = from + ORDERS_PAGE_SIZE - 1;
+      const { data: rows, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('customer_email', user.email)
+        .order('created_date', { ascending: false })
+        .range(from, to);
+      if (error) throw error;
+      return rows || [];
+    },
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === ORDERS_PAGE_SIZE ? allPages.length : undefined,
   });
+
+  const orders = useMemo(() => (data?.pages || []).flat(), [data]);
 
   const filtered = orders.filter((o) => {
     if (!search.trim()) return true;
@@ -87,6 +113,11 @@ export default function Orders() {
             <p className="text-center text-muted-foreground py-12">No orders match that search.</p>
           ) : (
             <div className="space-y-3">
+              {search.trim() && hasNextPage && (
+                <p className="text-xs text-muted-foreground -mt-2 mb-2">
+                  Searching loaded orders only. Load more below to extend the search.
+                </p>
+              )}
               {filtered.map((o) => (
                 <div key={o.id} className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4">
                   <div className="flex-1 min-w-0">
@@ -110,6 +141,23 @@ export default function Orders() {
                   </div>
                 </div>
               ))}
+              {hasNextPage && (
+                <div className="pt-2 flex justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                  >
+                    {isFetchingNextPage ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading…
+                      </>
+                    ) : (
+                      'Load more'
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </>

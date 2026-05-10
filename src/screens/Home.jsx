@@ -1,32 +1,83 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { melaeat } from '@/api/apiClient';
+import { melaeat, supabase } from '@/api/apiClient';
 import { Search, ArrowRight, MapPin, Store, Bike, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import RestaurantCard from '@/components/customer/RestaurantCard';
 import CuisineFilter from '@/components/customer/CuisineFilter';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Home() {
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [cuisine, setCuisine] = useState('all');
+
+  useEffect(() => {
+    const handle = setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => clearTimeout(handle);
+  }, [search]);
 
   const { data: restaurants = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['restaurants'],
     queryFn: () => melaeat.entities.Restaurant.filter({ status: 'approved' }, '-is_featured', 100),
   });
 
+  // Cheap head-count to detect first-time customers. We don't need the rows.
+  const { data: orderCount = null } = useQuery({
+    queryKey: ['my-order-count', user?.email],
+    enabled: !!user?.email,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_email', user.email);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  const isNewCustomer =
+    !!user
+    && (user.role === 'user' || user.role === 'customer')
+    && orderCount === 0
+    && (user.favorite_restaurant_ids || []).length === 0;
+
+  // Extra search pass: match menu items by name/description, then union those restaurants
+  // into the visible set so a search for "tibs" or "injera" finds the kitchens that serve them.
+  const { data: menuMatchRestaurantIds = [] } = useQuery({
+    queryKey: ['menu-search', debouncedSearch],
+    enabled: debouncedSearch.length >= 2,
+    queryFn: async () => {
+      const term = debouncedSearch.replace(/[%,]/g, ' ');
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select('restaurant_id')
+        .eq('in_stock', true)
+        .or(`name.ilike.%${term}%,description.ilike.%${term}%`)
+        .limit(200);
+      if (error) throw error;
+      const ids = new Set();
+      for (const row of data || []) if (row.restaurant_id) ids.add(row.restaurant_id);
+      return Array.from(ids);
+    },
+  });
+
   const filtered = useMemo(() => {
+    const term = debouncedSearch.toLowerCase();
+    const menuIds = new Set(menuMatchRestaurantIds);
     return restaurants.filter((r) => {
       const matchesSearch =
-        !search ||
-        r.name?.toLowerCase().includes(search.toLowerCase()) ||
-        (r.cuisines || []).some((c) => c.toLowerCase().includes(search.toLowerCase()));
+        !term ||
+        r.name?.toLowerCase().includes(term) ||
+        (r.cuisines || []).some((c) => c.toLowerCase().includes(term)) ||
+        menuIds.has(r.id);
       const matchesCuisine = cuisine === 'all' || (r.cuisines || []).includes(cuisine);
       return matchesSearch && matchesCuisine;
     });
-  }, [restaurants, search, cuisine]);
+  }, [restaurants, debouncedSearch, cuisine, menuMatchRestaurantIds]);
 
   const featured = filtered.filter((r) => r.is_featured).slice(0, 3);
   const all = filtered.filter((r) => !featured.includes(r));
@@ -98,6 +149,29 @@ export default function Home() {
           <CuisineFilter value={cuisine} onChange={setCuisine} />
         </div>
       </section>
+
+      {isNewCustomer && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 px-6 py-5 sm:px-8 sm:py-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+            <div className="flex-1 min-w-0">
+              <p className="font-display text-xl sm:text-2xl font-semibold">
+                Welcome{user?.full_name ? `, ${user.full_name.split(' ')[0]}` : ''}.
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Three quick steps: pick a restaurant, drop a delivery pin, place your order. Saving a delivery location now makes every checkout faster.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Button asChild className="rounded-full">
+                <Link to="/addresses">Set delivery location</Link>
+              </Button>
+              <Button asChild variant="outline" className="rounded-full">
+                <Link to="#restaurants">Browse restaurants</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Restaurants */}
       <section id="restaurants" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

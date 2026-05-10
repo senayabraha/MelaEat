@@ -1,11 +1,16 @@
 import React from 'react';
 import { Link, Outlet } from 'react-router-dom';
 import CustomerHeader from './CustomerHeader';
+import NotificationPermissionBanner from '@/components/customer/NotificationPermissionBanner';
+import useOrderNotifications from '@/hooks/useOrderNotifications';
 
 export default function CustomerLayout() {
+  useOrderNotifications();
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <CustomerHeader />
+      <NotificationPermissionBanner />
       <main className="flex-1">
         <Outlet />
       </main>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { melaeat } from '@/api/apiClient';
-import { Phone, MapPin, Star, Loader2, AlertTriangle } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { melaeat, supabase } from '@/api/apiClient';
+import { Phone, MapPin, Star, Loader2, AlertTriangle, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -25,6 +25,7 @@ import { useAuth } from '@/lib/AuthContext';
 export default function OrderTracking() {
   const { id } = useParams();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [showRating, setShowRating] = useState(false);
   const [restaurantStars, setRestaurantStars] = useState(0);
   const [driverStars, setDriverStars] = useState(0);
@@ -32,12 +33,20 @@ export default function OrderTracking() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [showIssue, setShowIssue] = useState(false);
   const [issueDescription, setIssueDescription] = useState('');
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(() => Date.now());
+  const [isLive, setIsLive] = useState(false);
+  const [, setTick] = useState(0);
   const { toast } = useToast();
 
   const { data: order, isLoading, refetch } = useQuery({
     queryKey: ['order', id],
-    queryFn: () => melaeat.entities.Order.get(id),
-    refetchInterval: 30000,
+    queryFn: async () => {
+      const fresh = await melaeat.entities.Order.get(id);
+      setLastUpdatedAt(Date.now());
+      return fresh;
+    },
+    // Realtime push is the primary update path; this is a safety net for dropped websockets.
+    refetchInterval: 60000,
   });
 
   const { data: driverProfile } = useQuery({
@@ -49,12 +58,39 @@ export default function OrderTracking() {
     enabled: !!order?.driver_email,
   });
 
+  // Subscribe to changes for THIS order only and push the new row straight into
+  // the React Query cache, so the UI updates the instant Postgres notifies us.
+  // Server-side filter (id=eq.<id>) means we don't receive events for other orders.
   useEffect(() => {
-    const unsub = melaeat.entities.Order.subscribe((evt) => {
-      if (evt.id === id) refetch();
-    });
-    return () => unsub && unsub();
-  }, [id, refetch]);
+    if (!id) return undefined;
+
+    const channel = supabase
+      .channel(`order-${id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${id}` },
+        (payload) => {
+          if (payload.new) {
+            queryClient.setQueryData(['order', id], payload.new);
+            setLastUpdatedAt(Date.now());
+          }
+        }
+      )
+      .subscribe((status) => {
+        setIsLive(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+      setIsLive(false);
+    };
+  }, [id, queryClient]);
+
+  // 1Hz tick keeps the "updated Xs ago" label fresh without re-fetching.
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const submitRating = async () => {
     try {
@@ -134,6 +170,7 @@ export default function OrderTracking() {
           <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusColor(order.status)}`}>
             {statusLabel(order.status)}
           </span>
+          <LiveIndicator isLive={isLive} lastUpdatedAt={lastUpdatedAt} />
           {canCancel && (
             <Button variant="outline" size="sm" onClick={() => setConfirmCancel(true)}>
               Cancel order
@@ -302,6 +339,27 @@ export default function OrderTracking() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function LiveIndicator({ isLive, lastUpdatedAt }) {
+  const seconds = Math.max(0, Math.floor((Date.now() - lastUpdatedAt) / 1000));
+  const ago =
+    seconds < 5 ? 'just now' :
+    seconds < 60 ? `${seconds}s ago` :
+    seconds < 3600 ? `${Math.floor(seconds / 60)}m ago` :
+    `${Math.floor(seconds / 3600)}h ago`;
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"
+      title={isLive ? 'Real-time updates connected' : 'Reconnecting…'}
+    >
+      <Radio className={`w-3 h-3 ${isLive ? 'text-success' : 'text-muted-foreground/60'}`} />
+      <span className={isLive ? 'text-foreground' : ''}>{isLive ? 'Live' : 'Reconnecting'}</span>
+      <span aria-hidden>·</span>
+      <span>updated {ago}</span>
+    </span>
   );
 }
 

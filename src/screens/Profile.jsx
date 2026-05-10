@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { Award } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function Profile() {
@@ -77,15 +76,6 @@ export default function Profile() {
           </div>
           <Button onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</Button>
         </div>
-      </div>
-
-      <div className="bg-gradient-to-br from-primary/10 to-accent/10 border border-border rounded-2xl p-6">
-        <div className="flex items-center gap-3 mb-2">
-          <Award className="w-5 h-5 text-primary" />
-          <h2 className="font-display text-xl font-semibold">Loyalty points</h2>
-        </div>
-        <p className="font-display text-4xl font-bold">{user.loyalty_points || 0}</p>
-        <p className="text-sm text-muted-foreground mt-1">Earn points with every order.</p>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
@@ -32,21 +32,21 @@ export default function RestaurantMenu() {
 
   useEffect(() => {
     (async () => {
-      let res = await base44.entities.Restaurant.filter({ owner_email: user.email });
-      if (res.length === 0 && user.restaurant_id) res = [await base44.entities.Restaurant.get(user.restaurant_id)];
+      let res = await melaeat.entities.Restaurant.filter({ owner_email: user.email });
+      if (res.length === 0 && user.restaurant_id) res = [await melaeat.entities.Restaurant.get(user.restaurant_id)];
       setRestaurant(res[0]);
     })();
   }, [user.email]);
 
   const { data: categories = [] } = useQuery({
     queryKey: ['rest-cats', restaurant?.id],
-    queryFn: () => base44.entities.MenuCategory.filter({ restaurant_id: restaurant.id }, 'sort_order'),
+    queryFn: () => melaeat.entities.MenuCategory.filter({ restaurant_id: restaurant.id }, 'sort_order'),
     enabled: !!restaurant,
   });
 
   const { data: items = [] } = useQuery({
     queryKey: ['rest-items', restaurant?.id],
-    queryFn: () => base44.entities.MenuItem.filter({ restaurant_id: restaurant.id }, 'sort_order'),
+    queryFn: () => melaeat.entities.MenuItem.filter({ restaurant_id: restaurant.id }, 'sort_order'),
     enabled: !!restaurant,
   });
 
@@ -58,7 +58,7 @@ export default function RestaurantMenu() {
   const addCategory = async () => {
     if (!newCategory.trim()) return;
     try {
-      await base44.entities.MenuCategory.create({ restaurant_id: restaurant.id, name: newCategory.trim(), sort_order: categories.length });
+      await melaeat.entities.MenuCategory.create({ restaurant_id: restaurant.id, name: newCategory.trim(), sort_order: categories.length });
       setNewCategory('');
       refresh();
     } catch (error) {
@@ -68,8 +68,8 @@ export default function RestaurantMenu() {
   const deleteCategory = async (c) => {
     try {
       const its = items.filter(i => i.category_id === c.id);
-      await Promise.all(its.map(i => base44.entities.MenuItem.delete(i.id)));
-      await base44.entities.MenuCategory.delete(c.id);
+      await Promise.all(its.map(i => melaeat.entities.MenuItem.delete(i.id)));
+      await melaeat.entities.MenuCategory.delete(c.id);
       setDeleteTarget(null);
       refresh();
     } catch (error) {
@@ -78,7 +78,7 @@ export default function RestaurantMenu() {
   };
   const toggleStock = async (it) => {
     try {
-      await base44.entities.MenuItem.update(it.id, { in_stock: !it.in_stock });
+      await melaeat.entities.MenuItem.update(it.id, { in_stock: !it.in_stock });
       refresh();
       toast({ title: it.in_stock ? 'Marked out of stock' : 'Marked in stock' });
     } catch (error) {
@@ -88,7 +88,7 @@ export default function RestaurantMenu() {
   const setCategoryStock = async (categoryId, inStock) => {
     try {
       const cItems = items.filter(i => i.category_id === categoryId);
-      await Promise.all(cItems.map((it) => base44.entities.MenuItem.update(it.id, { in_stock: inStock })));
+      await Promise.all(cItems.map((it) => melaeat.entities.MenuItem.update(it.id, { in_stock: inStock })));
       refresh();
       toast({ title: inStock ? 'Category marked in stock' : 'Category marked out of stock' });
     } catch (error) {
@@ -97,7 +97,7 @@ export default function RestaurantMenu() {
   };
   const deleteItem = async (it) => {
     try {
-      await base44.entities.MenuItem.delete(it.id);
+      await melaeat.entities.MenuItem.delete(it.id);
       setDeleteTarget(null);
       refresh();
     } catch (error) {

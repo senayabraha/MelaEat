@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Search, ArrowRight, MapPin, Store, Bike, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ export default function Home() {
 
   const { data: restaurants = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['restaurants'],
-    queryFn: () => base44.entities.Restaurant.filter({ status: 'approved' }, '-is_featured', 100),
+    queryFn: () => melaeat.entities.Restaurant.filter({ status: 'approved' }, '-is_featured', 100),
   });
 
   const filtered = useMemo(() => {

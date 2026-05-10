@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '@/api/base44Client';
+import { supabase } from '@/api/apiClient';
 import Logo from '@/components/layout/Logo';
 
 const allowedRoles = new Set(['customer', 'restaurant', 'driver', 'admin']);

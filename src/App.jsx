@@ -21,9 +21,8 @@ import OrderTracking from '@/screens/OrderTracking';
 import Favorites from '@/screens/Favorites';
 import Profile from '@/screens/Profile';
 import Addresses from '@/screens/Addresses';
-import Login from '@/screens/Login';
+import AuthPage from '@/screens/auth/AuthPage';
 import Logout from '@/screens/Logout';
-import RoleSelection from '@/screens/RoleSelection';
 import TaskDashboard from '@/screens/TaskDashboard';
 import ProtectedRoute from '@/components/ProtectedRoute';
 
@@ -72,7 +71,7 @@ const AuthenticatedApp = () => {
         <Route path="/browse" element={<Home />} />
         <Route path="/restaurant/:id" element={<RestaurantDetail />} />
         <Route path="/cart" element={<Cart />} />
-        <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login/customer" replace />} />}>
+        <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to={'/login/customer?redirect=' + encodeURIComponent('/checkout')} replace />} />}>
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/order/:id" element={<OrderTracking />} />
@@ -118,14 +117,13 @@ const AuthenticatedApp = () => {
       </Route>
 
       <Route path="/login" element={<Navigate to="/login/customer" replace />} />
-      <Route path="/login/:role" element={<Login />} />
+      <Route path="/login/:role" element={<AuthPage />} />
       <Route path="/signup" element={<Navigate to="/signup/customer" replace />} />
-      <Route path="/signup/:role" element={<Login />} />
+      <Route path="/signup/:role" element={<AuthPage />} />
       <Route path="/reset-password" element={<Navigate to="/reset-password/customer" replace />} />
-      <Route path="/reset-password/:role" element={<Login />} />
+      <Route path="/reset-password/:role" element={<AuthPage />} />
       <Route path="/logout" element={<Navigate to="/logout/customer" replace />} />
       <Route path="/logout/:role" element={<Logout />} />
-      <Route path="/select-role" element={<RoleSelection />} />
       <Route path="/tasks" element={<TaskDashboard />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>

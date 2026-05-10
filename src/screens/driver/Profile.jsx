@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +23,7 @@ export default function DriverProfile() {
 
   const save = async () => {
     setSaving(true);
-    await base44.auth.updateMe(form);
+    await melaeat.auth.updateMe(form);
     await refreshUser();
     toast({ title: 'Profile saved' });
     setSaving(false);

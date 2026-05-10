@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { formatETB } from '@/lib/format';
 
@@ -10,7 +10,7 @@ export default function DriverEarnings() {
 
   const { data: orders = [] } = useQuery({
     queryKey: ['driver-earnings', user.email],
-    queryFn: () => base44.entities.Order.filter({ driver_email: user.email, status: 'delivered' }, '-created_date', 500),
+    queryFn: () => melaeat.entities.Order.filter({ driver_email: user.email, status: 'delivered' }, '-created_date', 500),
   });
 
   const stats = useMemo(() => {

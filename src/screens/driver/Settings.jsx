@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -17,7 +17,7 @@ export default function DriverSettings() {
   const save = async () => {
     setSaving(true);
     try {
-      await base44.auth.updateMe({
+      await melaeat.auth.updateMe({
         driver_status: approved && online ? 'online' : 'offline',
       });
       await refreshUser();

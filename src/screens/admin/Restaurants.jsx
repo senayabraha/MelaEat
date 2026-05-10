@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -14,17 +14,17 @@ export default function AdminRestaurants() {
   const [form, setForm] = useState({ name: '', owner_email: '', city: 'Addis Ababa' });
   const { data: restaurants = [], isLoading } = useQuery({
     queryKey: ['admin-restaurants-full'],
-    queryFn: () => base44.entities.Restaurant.list('-created_date', 500),
+    queryFn: () => melaeat.entities.Restaurant.list('-created_date', 500),
   });
 
   const updateStatus = async (r, status) => {
-    await base44.entities.Restaurant.update(r.id, { status });
+    await melaeat.entities.Restaurant.update(r.id, { status });
     qc.invalidateQueries({ queryKey: ['admin-restaurants-full'] });
   };
 
   const create = async () => {
     if (!form.name.trim() || !form.owner_email.trim()) return;
-    await base44.entities.Restaurant.create({
+    await melaeat.entities.Restaurant.create({
       name: form.name.trim(),
       owner_email: form.owner_email.trim().toLowerCase(),
       city: form.city.trim() || 'Addis Ababa',

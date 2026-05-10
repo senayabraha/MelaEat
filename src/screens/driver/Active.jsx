@@ -1,7 +1,7 @@
 import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,7 +34,7 @@ export default function DriverActive() {
   // Available orders (ready, no driver yet)
   const { data: available = [] } = useQuery({
     queryKey: ['driver-available'],
-    queryFn: () => base44.entities.Order.filter({ status: 'ready_for_pickup', driver_email: null }, '-created_date', 50),
+    queryFn: () => melaeat.entities.Order.filter({ status: 'ready_for_pickup', driver_email: null }, '-created_date', 50),
     refetchInterval: 8000,
     enabled: approved && user.driver_status === 'online',
   });
@@ -42,7 +42,7 @@ export default function DriverActive() {
   // Active orders for this driver
   const { data: active = [] } = useQuery({
     queryKey: ['driver-active', user.email],
-    queryFn: () => base44.entities.Order.filter({
+    queryFn: () => melaeat.entities.Order.filter({
       driver_email: user.email,
       status: ['ready_for_pickup', 'picked_up', 'on_the_way'],
     }, '-updated_date', 20),
@@ -56,7 +56,7 @@ export default function DriverActive() {
 
   const accept = async (o) => {
     try {
-      await base44.orders.action(o.id, { action: 'driver_accept' });
+      await melaeat.orders.action(o.id, { action: 'driver_accept' });
       toast({ title: 'Delivery accepted' });
       await refreshUser();
       refresh();
@@ -79,7 +79,7 @@ export default function DriverActive() {
 
   const submitStatusUpdate = async (o, status) => {
     try {
-      await base44.orders.action(o.id, { action: status });
+      await melaeat.orders.action(o.id, { action: status });
       await refreshUser();
       refresh();
     } catch (error) {
@@ -105,7 +105,7 @@ export default function DriverActive() {
   const submitIssue = async () => {
     if (!issueDescription.trim() || !issueOrder) return;
     try {
-      await base44.entities.IssueReport.create({
+      await melaeat.entities.IssueReport.create({
         order_id: issueOrder.id,
         reporter_email: user.email,
         reporter_role: 'driver',

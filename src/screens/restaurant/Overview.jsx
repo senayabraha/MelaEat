@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Switch } from '@/components/ui/switch';
 import { ClipboardList, DollarSign, Star, TrendingUp } from 'lucide-react';
 import { formatETB, statusLabel } from '@/lib/format';
@@ -14,9 +14,9 @@ export default function RestaurantOverview() {
 
   const loadRestaurant = async () => {
     try {
-      let res = await base44.entities.Restaurant.filter({ owner_email: user.email });
+      let res = await melaeat.entities.Restaurant.filter({ owner_email: user.email });
       if (res.length === 0 && user.restaurant_id) {
-        res = [await base44.entities.Restaurant.get(user.restaurant_id)];
+        res = [await melaeat.entities.Restaurant.get(user.restaurant_id)];
       }
       setRestaurant(res[0] || null);
     } catch (error) {
@@ -28,7 +28,7 @@ export default function RestaurantOverview() {
 
   const { data: orders = [] } = useQuery({
     queryKey: ['restaurant-orders', restaurant?.id],
-    queryFn: () => base44.entities.Order.filter({ restaurant_id: restaurant.id }, '-created_date', 200),
+    queryFn: () => melaeat.entities.Order.filter({ restaurant_id: restaurant.id }, '-created_date', 200),
     enabled: !!restaurant,
     refetchInterval: 10000,
   });
@@ -60,7 +60,7 @@ export default function RestaurantOverview() {
   const activeOrders = orders.filter((o) => ['pending', 'accepted', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(o.status));
 
   const toggleOpen = async (val) => {
-    await base44.entities.Restaurant.update(restaurant.id, { is_open_manual: val });
+    await melaeat.entities.Restaurant.update(restaurant.id, { is_open_manual: val });
     setRestaurant({ ...restaurant, is_open_manual: val });
     toast({ title: val ? 'Restaurant is now open' : 'Orders paused' });
   };

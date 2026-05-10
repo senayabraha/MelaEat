@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChevronRight, Repeat, Search, AlertCircle } from 'lucide-react';
@@ -19,7 +19,7 @@ export default function Orders() {
 
   const { data: orders = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['my-orders', user?.email],
-    queryFn: () => base44.entities.Order.filter({ customer_email: user.email }, '-created_date', 50),
+    queryFn: () => melaeat.entities.Order.filter({ customer_email: user.email }, '-created_date', 50),
     enabled: !!user,
   });
 
@@ -35,7 +35,7 @@ export default function Orders() {
 
   const reorder = async (order) => {
     try {
-      const restaurant = await base44.entities.Restaurant.get(order.restaurant_id);
+      const restaurant = await melaeat.entities.Restaurant.get(order.restaurant_id);
       clear();
       for (const it of order.items) {
         // unit_price already includes selected option price deltas — use it directly

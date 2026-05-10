@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Upload } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -26,7 +26,7 @@ export default function MenuItemForm({ open, onClose, onSave, item, categories, 
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await melaeat.integrations.Core.UploadFile({ file });
       setForm({ ...form, image_url: file_url });
       toast({ title: 'Image uploaded' });
     } catch (error) {
@@ -40,10 +40,10 @@ export default function MenuItemForm({ open, onClose, onSave, item, categories, 
     try {
       const payload = { ...form, price: Number(form.price) };
       if (form.id) {
-        await base44.entities.MenuItem.update(form.id, payload);
+        await melaeat.entities.MenuItem.update(form.id, payload);
         toast({ title: 'Menu item updated' });
       } else {
-        await base44.entities.MenuItem.create(payload);
+        await melaeat.entities.MenuItem.create(payload);
         toast({ title: 'Menu item created' });
       }
       onSave();

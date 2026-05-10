@@ -1,7 +1,7 @@
 import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { formatETB, formatDate, statusLabel, statusColor } from '@/lib/format';
 import { Star } from 'lucide-react';
 
@@ -10,7 +10,7 @@ export default function DriverHistory() {
 
   const { data: orders = [] } = useQuery({
     queryKey: ['driver-all-history', user.email],
-    queryFn: () => base44.entities.Order.filter({ driver_email: user.email }, '-created_date', 200),
+    queryFn: () => melaeat.entities.Order.filter({ driver_email: user.email }, '-created_date', 200),
   });
 
   return (

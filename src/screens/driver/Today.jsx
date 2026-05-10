@@ -1,7 +1,7 @@
 import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { melaeat } from '@/api/apiClient';
 import { Switch } from '@/components/ui/switch';
 import { Truck, DollarSign, Star, Package } from 'lucide-react';
 import { formatETB } from '@/lib/format';
@@ -15,7 +15,7 @@ export default function DriverToday() {
 
   const { data: orders = [] } = useQuery({
     queryKey: ['driver-history', user.email],
-    queryFn: () => base44.entities.Order.filter({ driver_email: user.email, status: 'delivered' }, '-created_date', 200),
+    queryFn: () => melaeat.entities.Order.filter({ driver_email: user.email, status: 'delivered' }, '-created_date', 200),
   });
 
   const today = new Date(); today.setHours(0,0,0,0);
@@ -27,7 +27,7 @@ export default function DriverToday() {
       toast({ title: 'Your driver account is waiting for approval', variant: 'destructive' });
       return;
     }
-    await base44.auth.updateMe({ driver_status: v ? 'online' : 'offline' });
+    await melaeat.auth.updateMe({ driver_status: v ? 'online' : 'offline' });
     await refreshUser();
     toast({ title: v ? "You're online" : 'Going offline' });
   };

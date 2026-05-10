@@ -423,6 +423,21 @@ export const melaeat = {
 
       return response.json();
     },
+
+    async submitTip(orderId, tipAmount) {
+      const response = await authFetch(`/api/orders/${orderId}/tip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tip_amount: Number(tipAmount) || 0 }),
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: 'Failed to save tip' }));
+        throw new Error(getApiErrorMessage(result, 'Failed to save tip'));
+      }
+
+      return response.json();
+    },
   },
 
   integrations: {

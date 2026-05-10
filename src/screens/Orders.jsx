@@ -4,7 +4,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { melaeat, supabase } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ChevronRight, Loader2, Repeat, Search, AlertCircle } from 'lucide-react';
+import { ChevronRight, Loader2, Repeat, Search, AlertCircle, Star } from 'lucide-react';
 import { formatETB, statusLabel, statusColor, formatDate, paymentStatusLabel, paymentStatusColor } from '@/lib/format';
 import { useCart } from '@/lib/cart';
 import { useToast } from '@/components/ui/use-toast';
@@ -118,29 +118,40 @@ export default function Orders() {
                   Searching loaded orders only. Load more below to extend the search.
                 </p>
               )}
-              {filtered.map((o) => (
-                <div key={o.id} className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded border ${statusColor(o.status)}`}>{statusLabel(o.status)}</span>
-                      <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded border ${paymentStatusColor(o.payment_status)}`}>{paymentStatusLabel(o.payment_status)}</span>
-                      <span className="text-xs text-muted-foreground">{formatDate(o.created_date)}</span>
+              {filtered.map((o) => {
+                const deliveredAt = o.delivered_at ? new Date(o.delivered_at).getTime() : 0;
+                const within48h = deliveredAt > 0 && Date.now() - deliveredAt < 48 * 60 * 60 * 1000;
+                const needsRating = o.status === 'delivered' && within48h && !o.customer_rating_restaurant;
+                return (
+                  <div key={o.id} className="bg-card border border-border rounded-2xl p-5 flex items-center gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded border ${statusColor(o.status)}`}>{statusLabel(o.status)}</span>
+                        <span className={`text-[11px] font-semibold uppercase px-2 py-0.5 rounded border ${paymentStatusColor(o.payment_status)}`}>{paymentStatusLabel(o.payment_status)}</span>
+                        <span className="text-xs text-muted-foreground">{formatDate(o.created_date)}</span>
+                      </div>
+                      <h3 className="font-display text-lg font-semibold truncate">{o.restaurant_name}</h3>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {o.items.length} item{o.items.length !== 1 ? 's' : ''}  |  {formatETB(o.total)}
+                      </p>
                     </div>
-                    <h3 className="font-display text-lg font-semibold truncate">{o.restaurant_name}</h3>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {o.items.length} item{o.items.length !== 1 ? 's' : ''}  |  {formatETB(o.total)}
-                    </p>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      {needsRating ? (
+                        <Button size="sm" onClick={() => navigate(`/order/${o.id}`)}>
+                          <Star className="w-3.5 h-3.5 mr-1 fill-current" /> Rate
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/order/${o.id}`)}>
+                          Details <ChevronRight className="w-4 h-4 ml-1" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => reorder(o)}>
+                        <Repeat className="w-3.5 h-3.5 mr-1" /> Reorder
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-2 shrink-0">
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/order/${o.id}`)}>
-                      Details <ChevronRight className="w-4 h-4 ml-1" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => reorder(o)}>
-                      <Repeat className="w-3.5 h-3.5 mr-1" /> Reorder
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {hasNextPage && (
                 <div className="pt-2 flex justify-center">
                   <Button

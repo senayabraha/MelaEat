@@ -21,7 +21,7 @@ const STATUS_HEADLINE = {
   ready_for_pickup: 'Ready for pickup',
   picked_up: 'Driver picked up your order',
   on_the_way: 'Your order is on the way',
-  delivered: 'Delivered — enjoy!',
+  delivered: 'Delivered — rate your experience',
   cancelled: 'Order cancelled',
   rejected: 'Order rejected',
 };

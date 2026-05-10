@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { melaeat, supabase } from '@/api/apiClient';
-import { Phone, MapPin, Star, Loader2, AlertTriangle, Radio } from 'lucide-react';
+import { Phone, MapPin, Star, Loader2, AlertTriangle, Radio, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -18,6 +19,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import OrderStatusTimeline from '@/components/orders/OrderStatusTimeline';
 import OrderChat from '@/components/orders/OrderChat';
+import LiveDriverMap from '@/components/customer/LiveDriverMap';
 import { formatETB, statusLabel, statusColor, paymentStatusLabel, paymentStatusColor } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/lib/AuthContext';
@@ -30,6 +32,9 @@ export default function OrderTracking() {
   const [restaurantStars, setRestaurantStars] = useState(0);
   const [driverStars, setDriverStars] = useState(0);
   const [review, setReview] = useState('');
+  const [postTip, setPostTip] = useState(0);
+  const [postTipCustom, setPostTipCustom] = useState('');
+  const [savingTip, setSavingTip] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [showIssue, setShowIssue] = useState(false);
   const [issueDescription, setIssueDescription] = useState('');
@@ -99,11 +104,35 @@ export default function OrderTracking() {
         customer_rating_driver: driverStars,
         customer_review: review,
       });
+
+      const tipValue = postTip === 'custom' ? Number(postTipCustom) : Number(postTip);
+      if (Number.isFinite(tipValue) && tipValue > 0 && order?.driver_email) {
+        try {
+          await melaeat.orders.submitTip(id, tipValue);
+        } catch (error) {
+          toast({ title: 'Tip not saved', description: error.message || 'Try again later.', variant: 'destructive' });
+        }
+      }
+
       setShowRating(false);
       toast({ title: 'Thank you for your rating!' });
       refetch();
     } catch (error) {
       toast({ title: 'Could not submit rating', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
+  };
+
+  const saveTipOnly = async (amount) => {
+    if (!order?.driver_email) return;
+    setSavingTip(true);
+    try {
+      await melaeat.orders.submitTip(id, Number(amount) || 0);
+      toast({ title: amount > 0 ? `Tip of ${amount} ETB added` : 'Tip cleared' });
+      refetch();
+    } catch (error) {
+      toast({ title: 'Could not save tip', description: error.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setSavingTip(false);
     }
   };
 
@@ -153,6 +182,8 @@ export default function OrderTracking() {
   const isClosed = ['delivered', 'cancelled', 'rejected'].includes(order.status);
   const alreadyRated = !!order.customer_rating_restaurant;
   const canCancel = ['accepted', 'pending'].includes(order.status);
+  const showPinCard = ['ready_for_pickup', 'picked_up', 'on_the_way'].includes(order.status) && !!order.delivery_code;
+  const showLiveMap = ['picked_up', 'on_the_way'].includes(order.status) && !!order.driver_email;
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -191,6 +222,35 @@ export default function OrderTracking() {
             )}
           </section>
 
+          {showPinCard && (
+            <section className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6">
+              <div className="flex items-start gap-3 mb-3">
+                <Lock className="w-5 h-5 text-amber-900 mt-0.5" />
+                <div>
+                  <h2 className="font-display text-lg font-semibold text-amber-900">Give this code to your driver</h2>
+                  <p className="text-sm text-amber-900/80">Read it out only when the driver hands you your food. It confirms the delivery is yours.</p>
+                </div>
+              </div>
+              <p className="font-mono text-5xl font-bold text-amber-900 tracking-[0.4em] text-center py-2 select-all">
+                {order.delivery_code}
+              </p>
+            </section>
+          )}
+
+          {showLiveMap && (
+            <section className="bg-card border border-border rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display text-xl font-semibold">Driver on the way</h2>
+                <span className="text-xs text-muted-foreground">Live location</span>
+              </div>
+              <LiveDriverMap
+                driverEmail={order.driver_email}
+                customerLat={order.delivery_lat}
+                customerLng={order.delivery_lng}
+              />
+            </section>
+          )}
+
           {order.driver_email && (
             <section className="bg-card border border-border rounded-2xl p-6">
               <h2 className="font-display text-xl font-semibold mb-3">Your driver</h2>
@@ -228,6 +288,20 @@ export default function OrderTracking() {
             </section>
           )}
 
+          {isDelivered && alreadyRated && order.driver_email && Number(order.tip_amount) === 0 && (
+            <section className="bg-card border border-border rounded-2xl p-6">
+              <h2 className="font-display text-lg font-semibold mb-1">Add a tip for {order.driver_name || 'your driver'}</h2>
+              <p className="text-sm text-muted-foreground mb-3">Tips are paid out to drivers separately.</p>
+              <div className="flex flex-wrap gap-2">
+                {[20, 50, 100].map((v) => (
+                  <Button key={v} variant="outline" size="sm" disabled={savingTip} onClick={() => saveTipOnly(v)}>
+                    +{v} ETB
+                  </Button>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Post-delivery issue report */}
           {isDelivered && (
             <section className="bg-card border border-border rounded-2xl p-6">
@@ -261,6 +335,9 @@ export default function OrderTracking() {
               {order.discount > 0 && (
                 <div className="flex justify-between text-success"><span>Discount</span><span>-{formatETB(order.discount)}</span></div>
               )}
+              {Number(order.tip_amount) > 0 && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Driver tip</span><span>{formatETB(order.tip_amount)}</span></div>
+              )}
               <div className="flex justify-between font-semibold text-base pt-2"><span>Total</span><span>{formatETB(order.total)}</span></div>
             </div>
             <div className="border-t border-border mt-4 pt-4 text-xs text-muted-foreground space-y-1">
@@ -291,6 +368,44 @@ export default function OrderTracking() {
               <div>
                 <p className="text-sm font-medium mb-2">Driver</p>
                 <StarPicker value={driverStars} onChange={setDriverStars} />
+              </div>
+            )}
+            {order.driver_email && Number(order.tip_amount) === 0 && (
+              <div>
+                <p className="text-sm font-medium mb-2">Add a tip? (optional)</p>
+                <div className="flex flex-wrap gap-2">
+                  {[0, 20, 50, 100].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => { setPostTip(v); setPostTipCustom(''); }}
+                      className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                        postTip === v ? 'border-foreground bg-foreground text-background' : 'border-border'
+                      }`}
+                    >
+                      {v === 0 ? 'No tip' : `+${v} ETB`}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setPostTip('custom')}
+                    className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                      postTip === 'custom' ? 'border-foreground bg-foreground text-background' : 'border-border'
+                    }`}
+                  >
+                    Custom
+                  </button>
+                </div>
+                {postTip === 'custom' && (
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="Tip in ETB"
+                    value={postTipCustom}
+                    onChange={(e) => setPostTipCustom(e.target.value)}
+                    className="mt-2"
+                  />
+                )}
               </div>
             )}
             <div>

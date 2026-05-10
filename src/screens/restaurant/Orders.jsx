@@ -14,6 +14,8 @@ export default function RestaurantOrders() {
   const [restaurant, setRestaurant] = useState(null);
   const [rejectingOrder, setRejectingOrder] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [overrideOrder, setOverrideOrder] = useState(null);
+  const [overrideReason, setOverrideReason] = useState('');
   const previousActiveCount = React.useRef(null);
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -86,6 +88,31 @@ export default function RestaurantOrders() {
     }
   };
 
+  const onOverridePin = (o) => {
+    setOverrideOrder(o);
+    setOverrideReason('');
+  };
+
+  const confirmOverride = async () => {
+    if (!overrideOrder) return;
+    if (overrideReason.trim().length < 5) {
+      toast({ title: 'A reason is required (5+ chars).', variant: 'destructive' });
+      return;
+    }
+    try {
+      await melaeat.orders.action(overrideOrder.id, {
+        action: 'delivered',
+        override: true,
+        override_reason: overrideReason.trim(),
+      });
+      setOverrideOrder(null);
+      toast({ title: 'Delivery confirmed (PIN overridden)', description: 'Logged for audit.' });
+      refresh();
+    } catch (error) {
+      toast({ title: 'Could not override PIN', description: error.message || 'Please try again.', variant: 'destructive' });
+    }
+  };
+
   const buckets = {
     new: orders.filter(o => o.status === 'pending'),
     active: orders.filter(o => ['accepted', 'preparing', 'ready_for_pickup', 'picked_up', 'on_the_way'].includes(o.status)),
@@ -129,6 +156,7 @@ export default function RestaurantOrders() {
                     onReject={reject}
                     onAdvance={advance}
                     onAssign={assign}
+                    onOverridePin={onOverridePin}
                     drivers={drivers}
                   />
                 ))}
@@ -153,6 +181,31 @@ export default function RestaurantOrders() {
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setRejectingOrder(null)}>Cancel</Button>
               <Button variant="destructive" onClick={confirmReject}>Reject order</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!overrideOrder} onOpenChange={(open) => !open && setOverrideOrder(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Override delivery PIN</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Use only if the customer cannot read out the PIN (left at gate, language issue, etc.). This is logged for audit.
+            </p>
+            <Textarea
+              value={overrideReason}
+              onChange={(event) => setOverrideReason(event.target.value)}
+              rows={3}
+              placeholder="Reason (e.g. customer left at gate, no answer)"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOverrideOrder(null)}>Cancel</Button>
+              <Button onClick={confirmOverride} disabled={overrideReason.trim().length < 5}>
+                Confirm delivery
+              </Button>
             </div>
           </div>
         </DialogContent>

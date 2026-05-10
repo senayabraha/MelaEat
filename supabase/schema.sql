@@ -193,7 +193,13 @@ alter table public.orders
 add column if not exists cash_collected_at timestamptz,
 add column if not exists payment_confirmed_at timestamptz,
 add column if not exists payment_note text,
-add column if not exists idempotency_key text;
+add column if not exists idempotency_key text,
+add column if not exists tip_amount numeric(10,2) not null default 0,
+add column if not exists tip_added_at timestamptz,
+add column if not exists delivery_code_attempts integer not null default 0,
+add column if not exists delivery_code_overridden_by text,
+add column if not exists delivery_code_overridden_reason text,
+add column if not exists delivery_code_overridden_at timestamptz;
 
 with order_number_sequence_floor as (
   select greatest(
@@ -1099,14 +1105,6 @@ to authenticated
 using (
   id = auth.uid()
   or public.is_admin()
-  or (
-    role = 'driver'
-    and exists (
-      select 1 from public.orders o
-      where o.driver_email = profiles.email
-      and public.can_access_order(o.id)
-    )
-  )
 );
 
 create policy "profile insert own row" on public.profiles

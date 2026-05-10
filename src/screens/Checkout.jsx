@@ -42,6 +42,8 @@ export default function Checkout() {
   const [scheduledTime, setScheduledTime] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState(null);
+  const [tipPreset, setTipPreset] = useState(0); // 0, 20, 50, 100, or 'custom'
+  const [tipCustom, setTipCustom] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -76,7 +78,8 @@ export default function Checkout() {
       : 0
     : 0;
   const freeDelivery = appliedPromo?.discount_type === 'free_delivery';
-  const total = Math.max(0, subtotal + (freeDelivery ? 0 : deliveryFee) - discount);
+  const tipAmount = tipPreset === 'custom' ? Math.max(0, Number(tipCustom) || 0) : Number(tipPreset);
+  const total = Math.max(0, subtotal + (freeDelivery ? 0 : deliveryFee) - discount + tipAmount);
   const belowMinimum = !!restaurant?.minimum_order && subtotal < restaurant.minimum_order;
 
   const useCurrentLocation = () => {
@@ -160,6 +163,7 @@ export default function Checkout() {
         is_scheduled: deliveryMode === 'schedule',
         scheduled_for: deliveryMode === 'schedule' ? new Date(scheduledTime).toISOString() : null,
         idempotency_key: orderIdempotencyKey,
+        tip_amount: tipAmount,
       };
       const { order: created } = await melaeat.orders.create(payload);
       clear();
@@ -307,6 +311,45 @@ export default function Checkout() {
           )}
         </section>
 
+        {/* Driver tip (optional) */}
+        <section className="bg-card border border-border rounded-2xl p-6">
+          <h2 className="font-display text-xl font-semibold mb-1">Driver tip</h2>
+          <p className="text-sm text-muted-foreground mb-4">Optional. You can also tip after delivery.</p>
+          <div className="flex flex-wrap gap-2">
+            {[0, 20, 50, 100].map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => { setTipPreset(v); setTipCustom(''); }}
+                className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                  tipPreset === v ? 'border-foreground bg-foreground text-background' : 'border-border'
+                }`}
+              >
+                {v === 0 ? 'No tip' : `${v} ETB`}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setTipPreset('custom')}
+              className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                tipPreset === 'custom' ? 'border-foreground bg-foreground text-background' : 'border-border'
+              }`}
+            >
+              Custom
+            </button>
+          </div>
+          {tipPreset === 'custom' && (
+            <Input
+              type="number"
+              min="0"
+              placeholder="Tip in ETB"
+              value={tipCustom}
+              onChange={(e) => setTipCustom(e.target.value)}
+              className="mt-3 max-w-[200px]"
+            />
+          )}
+        </section>
+
         </div>
 
         {/* Summary */}
@@ -318,6 +361,9 @@ export default function Checkout() {
             <div className="flex justify-between"><span className="text-muted-foreground">Delivery fee</span><span>{freeDelivery ? <span className="text-success">Free</span> : formatETB(deliveryFee)}</span></div>
             {discount > 0 && (
               <div className="flex justify-between text-success"><span>Discount</span><span>-{formatETB(discount)}</span></div>
+            )}
+            {tipAmount > 0 && (
+              <div className="flex justify-between"><span className="text-muted-foreground">Driver tip</span><span>{formatETB(tipAmount)}</span></div>
             )}
           <div className="border-t border-border my-3" />
           {belowMinimum && (

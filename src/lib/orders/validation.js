@@ -51,6 +51,11 @@ const orderItemSchema = z
   })
   .strict();
 
+const tipAmountSchema = z
+  .union([z.number(), z.null(), z.undefined()])
+  .transform((value) => (value == null ? 0 : Number(value)))
+  .pipe(z.number().min(0).max(10000));
+
 export const createOrderRequestSchema = z
   .object({
     restaurant_id: z.string().uuid(),
@@ -65,6 +70,7 @@ export const createOrderRequestSchema = z
     is_scheduled: z.boolean().optional().default(false),
     scheduled_for: isoDateTimeSchema,
     idempotency_key: z.string().uuid().optional(),
+    tip_amount: tipAmountSchema.optional().default(0),
   })
   .strict()
   .superRefine((data, ctx) => {
@@ -109,7 +115,23 @@ export const orderActionRequestSchema = z.discriminatedUnion('action', [
   noExtraActionFields('driver_accept'),
   noExtraActionFields('picked_up'),
   noExtraActionFields('on_the_way'),
-  noExtraActionFields('delivered'),
+  z
+    .object({
+      action: z.literal('delivered'),
+      delivery_code: z
+        .union([z.string(), z.null(), z.undefined()])
+        .transform((value) => (value == null ? undefined : value.trim()))
+        .pipe(z.string().regex(/^\d{4}$/, 'Delivery code must be 4 digits.').optional()),
+      override: z.boolean().optional(),
+      override_reason: optionalTrimmedString(500).optional(),
+    })
+    .strict(),
 ]);
+
+export const tipUpdateRequestSchema = z
+  .object({
+    tip_amount: tipAmountSchema,
+  })
+  .strict();
 
 export const orderIdParamSchema = z.string().uuid();

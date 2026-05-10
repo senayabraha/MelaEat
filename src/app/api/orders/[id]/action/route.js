@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { apiError, readJsonBody, validationError } from '@/lib/api/responses';
 import { orderActionRequestSchema, orderIdParamSchema } from '@/lib/orders/validation';
 import { getSupabaseUserClient } from '@/lib/supabase/user';
+import { getSupabaseAdmin } from '@/lib/supabase/admin';
 
 const getBearerToken = (request) => {
   const authHeader = request.headers.get('authorization') || '';
@@ -21,6 +22,11 @@ const rpcErrors = {
   DRIVER_NOT_FOUND: { status: 404, message: 'Driver not found.' },
   DRIVER_NOT_APPROVED: { status: 400, message: 'Driver is not approved yet.' },
   DRIVER_NOT_ONLINE: { status: 400, message: 'Driver must be online before assignment.' },
+  PIN_REQUIRED: { status: 400, message: 'Enter the 4-digit code shown to the customer.' },
+  PIN_MISMATCH: { status: 400, message: 'That code does not match. Ask the customer to read it again.' },
+  PIN_LOCKED: { status: 423, message: 'Too many failed attempts. Ask support or the restaurant for an override.' },
+  PIN_OVERRIDE_FORBIDDEN: { status: 403, message: 'Only the restaurant or admin can override the delivery PIN.' },
+  PIN_OVERRIDE_REASON_REQUIRED: { status: 400, message: 'Please give a reason (5+ chars) for overriding the PIN.' },
 };
 
 const mapRpcError = (error) => {
@@ -74,6 +80,16 @@ export async function POST(request, { params }) {
     });
 
     if (actionError) {
+      // PIN mismatch must increment the attempt counter even though the RPC
+      // raised — the bump can't live inside the rolled-back transaction.
+      if (`${actionError.message || ''} ${actionError.details || ''}`.includes('PIN_MISMATCH')) {
+        try {
+          const admin = getSupabaseAdmin();
+          await admin.rpc('increment_delivery_code_attempts', { p_order_id: id });
+        } catch {
+          // Swallow — the surfaced PIN error is what the driver needs to see.
+        }
+      }
       const mappedResponse = mapRpcError(actionError);
       if (mappedResponse) return mappedResponse;
       throw actionError;

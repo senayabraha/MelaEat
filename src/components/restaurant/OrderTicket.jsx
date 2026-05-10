@@ -3,7 +3,7 @@ import { Phone, MapPin, Clock, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatETB, statusLabel, statusColor, timeAgo, paymentStatusLabel, paymentStatusColor } from '@/lib/format';
 
-export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAssign, drivers = [] }) {
+export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAssign, onOverridePin, drivers = [] }) {
   const handlePrint = () => {
     const w = window.open('', '_blank');
     if (!w) return;
@@ -14,6 +14,10 @@ export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAs
         h2{margin:0 0 8px}
         .row{display:flex;justify-content:space-between;margin:4px 0}
         .total{border-top:1px dashed #000;margin-top:8px;padding-top:8px;font-weight:bold}
+        .pin{margin-top:16px;padding:12px;border:2px dashed #000;text-align:center}
+        .pin .label{font-size:11px;letter-spacing:1px;text-transform:uppercase}
+        .pin .code{font-size:42px;font-weight:bold;letter-spacing:8px;margin-top:4px}
+        .pin .hint{font-size:10px;margin-top:4px;color:#444}
       </style></head><body>
       <h2>${order.restaurant_name}</h2>
       <div>Order ${order.order_number}</div>
@@ -25,6 +29,7 @@ export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAs
       <hr>
       ${order.items.map(it => `<div class="row"><span>${it.quantity}x ${it.name}</span><span>${it.line_total} ETB</span></div>`).join('')}
       <div class="row total"><span>TOTAL</span><span>${order.total} ETB</span></div>
+      ${order.delivery_code ? `<div class="pin"><div class="label">Delivery PIN</div><div class="code">${order.delivery_code}</div><div class="hint">Customer must read this to driver before handoff</div></div>` : ''}
       </body></html>
     `);
     w.document.close();
@@ -66,6 +71,16 @@ export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAs
         <div className="border-t border-border my-3" />
         <div className="flex justify-between font-semibold"><span>Total</span><span>{formatETB(order.total)}</span></div>
       </div>
+
+      {order.delivery_code && (
+        <div className="px-5 py-3 border-t border-border flex items-center justify-between gap-3 bg-amber-50">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-amber-900/70">Delivery PIN</p>
+            <p className="text-xs text-amber-900/80">Print on ticket — driver collects from customer</p>
+          </div>
+          <p className="font-mono text-2xl font-bold text-amber-900 tracking-[0.4em]">{order.delivery_code}</p>
+        </div>
+      )}
 
       <div className="px-5 py-3 bg-secondary/40 text-xs text-muted-foreground space-y-1 border-t border-border">
         <p className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> {order.customer_phone}</p>
@@ -114,6 +129,11 @@ export default function OrderTicket({ order, onAccept, onReject, onAdvance, onAs
             <option value="" disabled>Assign driver...</option>
             {drivers.map(d => <option key={d.email} value={d.email}>{d.full_name}</option>)}
           </select>
+        )}
+        {onOverridePin && ['picked_up', 'on_the_way'].includes(order.status) && (
+          <Button size="sm" variant="outline" onClick={() => onOverridePin(order)}>
+            Override delivery PIN
+          </Button>
         )}
       </div>
     </div>

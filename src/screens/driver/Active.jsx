@@ -4,21 +4,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { melaeat } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Phone, MapPin, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Phone, MapPin, ExternalLink, AlertTriangle, Lock } from 'lucide-react';
 import { formatETB, statusLabel, statusColor } from '@/lib/format';
 import { useToast } from '@/components/ui/use-toast';
 import OrderChat from '@/components/orders/OrderChat';
+import useDriverLocationBroadcaster from '@/hooks/useDriverLocationBroadcaster';
 
 const hasCoordinate = (value) => value !== null && value !== undefined && Number.isFinite(Number(value));
 
@@ -28,8 +20,15 @@ export default function DriverActive() {
   const { toast } = useToast();
   const [issueOrder, setIssueOrder] = React.useState(null);
   const [issueDescription, setIssueDescription] = React.useState('');
-  const [cashOrder, setCashOrder] = React.useState(null);
+  const [pinOrder, setPinOrder] = React.useState(null);
+  const [pinInput, setPinInput] = React.useState('');
+  const [pinError, setPinError] = React.useState('');
+  const [pinAttempts, setPinAttempts] = React.useState(0);
+  const [submittingPin, setSubmittingPin] = React.useState(false);
   const approved = !user.driver_approval_status || user.driver_approval_status === 'approved';
+
+  // Broadcast GPS while we have at least one active delivery in progress.
+  useDriverLocationBroadcaster();
 
   // Available orders (ready, no driver yet)
   const { data: available = [] } = useQuery({
@@ -70,18 +69,15 @@ export default function DriverActive() {
   };
 
   const updateStatus = async (o, status) => {
-    if (status === 'delivered' && o.payment_method === 'cash' && o.payment_status !== 'paid') {
-      setCashOrder(o);
+    if (status === 'delivered') {
+      setPinOrder(o);
+      setPinInput('');
+      setPinError('');
+      setPinAttempts(0);
       return;
     }
-    await submitStatusUpdate(o, status);
-  };
-
-  const submitStatusUpdate = async (o, status) => {
     try {
-      await melaeat.orders.action(o.id, { action: status });
-      await refreshUser();
-      refresh();
+      await submitStatusUpdate(o, status);
     } catch (error) {
       toast({
         title: 'Could not update delivery',
@@ -91,10 +87,41 @@ export default function DriverActive() {
     }
   };
 
-  const confirmCashDelivery = async () => {
-    if (!cashOrder) return;
-    await submitStatusUpdate(cashOrder, 'delivered');
-    setCashOrder(null);
+  const submitStatusUpdate = async (o, status, extraPayload = {}) => {
+    await melaeat.orders.action(o.id, { action: status, ...extraPayload });
+    await refreshUser();
+    refresh();
+  };
+
+  const submitPin = async () => {
+    if (!pinOrder) return;
+    if (!/^\d{4}$/.test(pinInput)) {
+      setPinError('Enter the 4-digit code from the customer.');
+      return;
+    }
+    setSubmittingPin(true);
+    setPinError('');
+    try {
+      await submitStatusUpdate(pinOrder, 'delivered', { delivery_code: pinInput });
+      const wasCash = pinOrder.payment_method === 'cash';
+      setPinOrder(null);
+      setPinInput('');
+      toast({
+        title: 'Delivery confirmed',
+        description: wasCash ? `Cash collected: ${formatETB(pinOrder.total || 0)}` : undefined,
+      });
+    } catch (error) {
+      const next = pinAttempts + 1;
+      setPinAttempts(next);
+      const remaining = Math.max(0, 3 - next);
+      const baseMessage = error.message || 'Could not confirm delivery.';
+      setPinError(remaining > 0
+        ? `${baseMessage} ${remaining} attempt${remaining === 1 ? '' : 's'} left.`
+        : 'Locked after 3 failed attempts. Contact support or the restaurant for an override.');
+      setPinInput('');
+    } finally {
+      setSubmittingPin(false);
+    }
   };
 
   const reportIssue = async (o) => {
@@ -191,20 +218,70 @@ export default function DriverActive() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!cashOrder} onOpenChange={(open) => !open && setCashOrder(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm cash collection</AlertDialogTitle>
-            <AlertDialogDescription>
-              Collect {formatETB(cashOrder?.total || 0)} from {cashOrder?.customer_name} before marking this order delivered and paid.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Not yet</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmCashDelivery}>Cash collected</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Dialog
+        open={!!pinOrder}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPinOrder(null);
+            setPinInput('');
+            setPinError('');
+            setPinAttempts(0);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-4 h-4" /> Confirm delivery
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Ask {pinOrder?.customer_name?.split(' ')[0] || 'the customer'} for the 4-digit code shown in their app or printed on the receipt.
+            </p>
+            {pinOrder?.payment_method === 'cash' && pinOrder?.payment_status !== 'paid' && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                Collect <span className="font-semibold">{formatETB(pinOrder?.total || 0)}</span> cash before confirming.
+              </div>
+            )}
+            <Input
+              autoFocus
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]{4}"
+              maxLength={4}
+              value={pinInput}
+              onChange={(e) => {
+                setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4));
+                setPinError('');
+              }}
+              placeholder="0000"
+              className="text-center text-3xl font-mono tracking-[0.6em] h-16"
+              disabled={pinAttempts >= 3 || submittingPin}
+            />
+            {pinError && <p className="text-sm text-destructive">{pinError}</p>}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPinOrder(null);
+                  setPinInput('');
+                  setPinError('');
+                  setPinAttempts(0);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={submitPin}
+                disabled={pinInput.length !== 4 || pinAttempts >= 3 || submittingPin}
+              >
+                {submittingPin ? 'Confirming…' : 'Confirm delivery'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -195,6 +195,7 @@ export async function POST(request) {
       is_scheduled: isScheduled,
       scheduled_for: isScheduled ? scheduledFor.toISOString() : null,
       idempotency_key: body.idempotency_key || null,
+      tip_amount: asNumber(body.tip_amount),
     };
 
     if (
